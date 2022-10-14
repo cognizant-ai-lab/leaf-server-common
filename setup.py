@@ -45,6 +45,12 @@ setup(
     packages=find_packages('.', exclude=['tests*', 'build_scripts*']),
     install_requires=[
         # f"leaf-common @ git+https://github.com/leaf-ai/leaf-common.git@{LEAF_COMMON_VERSION}#egg=leaf-common",
+        "grpcio==1.46.3",
+        "grpcio-health-checking==1.46.3",
+        "grpcio-reflection==1.46.3",
+        "grpcio-tools==1.46.3",
+        "protobuf==3.19.5",
+        "libhoney==2.0.0"
     ],
     description='Library for common service infrastructure for use by LEAF services',
     long_description=read('README.md'),

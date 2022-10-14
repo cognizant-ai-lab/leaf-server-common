@@ -9,17 +9,18 @@
 
 # Not yet
 # Do the source-available stuff first to fast-fail if credentials are not right
-git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.1.49
-
-# Note the leaf-distributed and completion-service are not necessarily a hard requirement
-
-# ESP SDK
-# Not yet
-# Note: esp-sdk drags in, amongst others, leaf-common, keras, tensorflow, pandas, numpy and h5py
-# git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/esp-sdk.git@3.0.24
-
+git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.1.50
 
 # Other dependencies
-numpy==1.22.4
-pandas==1.4.2
-scikit-learn==1.1.1
+
+# These are needed for grpc integration
+grpcio==1.46.3
+grpcio-health-checking==1.46.3
+grpcio-reflection==1.46.3
+grpcio-tools==1.46.3
+
+# Pinning to older version of protobuf required for tensorflow==2.9.1
+protobuf==3.19.5
+
+# Honeycomb logging
+libhoney==2.0.0
