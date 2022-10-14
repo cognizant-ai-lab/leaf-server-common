@@ -1,0 +1,83 @@
+version: "1.0"
+
+steps:
+
+  clone_repo_and_private_dependencies:
+    title: "Clone target repo and private git dependencies."
+    type: "leaf-ai/private-python-dependency:2.1.0"
+    # The target repo and branch refer to the top level
+    # repo that contains some private dependencies.
+    # SEARCH_ROOT root specifies where to look for the
+    # requirements.txt file.
+    arguments:
+      TARGET_REPO: ${{CF_REPO_NAME}}
+      TARGET_BRANCH: ${{CF_BRANCH}}
+      SEARCH_ROOT: '.'
+
+  leaf_server_common_build:
+      title: "Building Docker image"
+      type: "build"
+      image_name: "leaf/leaf-server-common"
+      dockerfile: "leaf-server-common/build_scripts/Dockerfile"
+
+  run_all_tests:
+    type: parallel
+    steps:
+      run_pylint:
+        title: Run pylint
+        image: ${{leaf_server_common_build}}
+        description: "Run Pylint"
+        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        # Allow the pipeline to continue if this step fails
+        fail_fast: false
+        commands:
+          - build_scripts/run_pylint.sh
+
+      run_flake8:
+        title: Run flake8
+        image: ${{leaf_server_common_build}}
+        description: "Run Flake8"
+        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        # Allow the pipeline to continue if this step fails
+        fail_fast: false
+        commands:
+          - flake8 --max-line-length 120 --exclude artifacts,build_scripts,deployment,leaf-common,esp-sdk
+
+      run_shellcheck:
+        title: Run Static Analysis on Shell Scripts
+        description: "Run shellcheck tool on our shell scripts"
+        type: "freestyle"
+        image: alpine:3.13.1
+        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        fail_fast: false
+        commands:
+          - apk add --quiet --no-progress --upgrade shellcheck bash
+          - ./build_scripts/run_shellcheck.sh
+
+      run_unit_tests:
+        title: Run unit tests
+        image: ${{leaf_server_common_build}}
+        description: Run unit tests (nosetests)
+        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        fail_fast: false
+        environment:
+          - ESP_SERVICE_USER=${{AUTH0_USERNAME}}
+          - ESP_SERVICE_PASSWORD=${{AUTH0_PASSWORD}}
+        commands:
+          - nosetests -v --nocapture --with-ignore-docstrings --with-timer --timer-top-n 10 --timer-ok 30s --timer-warning 60s
+
+  all_test_status:
+      title: Check For Failed Tests
+      description: "Handle any fail cases that may have occurred"
+      image: alpine:3.13.1
+      commands:
+        - exit 1
+      when:
+        condition:
+          any:
+            static_test_fail: 
+              steps.run_pylint.result == 'failure' || 
+              steps.run_flake8.result == 'failure' || 
+              steps.run_shellcheck.result == 'failure' || 
+              steps.run_unit_tests == 'failure' ||
+              steps.run_all_tests == 'failure'

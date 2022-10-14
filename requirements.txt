@@ -1,0 +1,25 @@
+
+# These requirements are for the Python that is run in the
+# backend/job_submission container.  As of 10/13/2021, this is the
+# only python container we need to deploy, so these requirements are
+# at the top-level.
+#
+# Requirements for tests, code style and other build stuff reside in
+# requirements-build.txt
+
+# Not yet
+# Do the source-available stuff first to fast-fail if credentials are not right
+git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.1.49
+
+# Note the leaf-distributed and completion-service are not necessarily a hard requirement
+
+# ESP SDK
+# Not yet
+# Note: esp-sdk drags in, amongst others, leaf-common, keras, tensorflow, pandas, numpy and h5py
+# git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/esp-sdk.git@3.0.24
+
+
+# Other dependencies
+numpy==1.22.4
+pandas==1.4.2
+scikit-learn==1.1.1
