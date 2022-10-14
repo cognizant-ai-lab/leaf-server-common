@@ -1,0 +1,19 @@
+# virtualenv folders
+venv/
+venv3/
+
+# Python byte code
+*.pyc
+unileaf_util.egg-info/
+
+# PyCharm env
+.idea/
+
+# Vim editor restore files
+*.swp
+
+# Documentation created by mkdocs which may harbor security vulnerabilities
+site/
+
+# Resources used by Dockerfile
+leaf-common/
