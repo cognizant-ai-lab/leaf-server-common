@@ -14,7 +14,7 @@ set -o nounset
 set -o pipefail
 
 # These will be excluded if they appear *anywhere* in the path to the shell script
-EXCLUDE_DIRS=""
+EXCLUDE_DIRS="leaf-common"
 
 # Find all shell files recursively from current dir. Exclude any that match the EXCLUDE_DIRS.
 # Run shellcheck on what remains.
