@@ -4,7 +4,7 @@
 
 RCFILE=./.pylintrc
 UP_TO_SNUFF_DIRS=$(ls -1)
-DEPENDENCY_DIRS="leaf-common"
+DEPENDENCY_DIRS=""
 IGNORE="${DEPENDENCY_DIRS} build_scripts"
 
 dirs=$1

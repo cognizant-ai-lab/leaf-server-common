@@ -7,61 +7,63 @@ FROM python:3.8-slim
 LABEL maintainer=donn.goodhew@cognizant.com
 ENV LANG C.UTF-8
 ENV PYTHON_VERSION 3.8
-ENV PIP3_VERSION 22.2.2
+ENV PIP3_VERSION 22.3
 ENV DEBIAN_FRONTEND noninteractive
+ENV USERNAME leaf
 
 # Debian basics
 RUN apt-get update -y
-RUN apt-get install curl -y
+RUN apt-get install curl git -y
 
-# Last vestige of ENN_SOURCE_CREDENTIALS
-ENV LEAF_SOURCE_CREDENTIALS=${ENN_SOURCE_CREDENTIALS}
-RUN  adduser --disabled-password --gecos '' leaf
-# The app home is our root directory within the image
-# where we place the repo's source directory.
-# We place the required private repo source directories
-# inside the repo directory. The private repo shuffling
-# is handled by Codefresh using our private-dependency plugin.
-ENV REPO leaf-server-common
+RUN  adduser --disabled-password --gecos '' ${USERNAME}
 
 # Change EXTERNAL_BUILD_ROOT to . if debugging locally
-ENV EXTERNAL_BUILD_ROOT ${REPO}
+ENV EXTERNAL_BUILD_ROOT .
 
-ENV APP_HOME /home/leaf
-ENV APP_SOURCE ${APP_HOME}/${REPO}
-USER leaf
-ENV our_venv ${APP_HOME}/venv/python-${PYTHON_VERSION}
-ENV PATH="$our_venv/bin:$PATH"
+# The APP_HOME home is our root directory within the image
+# where we place the repo's source directory.
+ENV APP_HOME /home/${USERNAME}
+
+ENV OUR_VENV ${APP_HOME}/venv/python-${PYTHON_VERSION}
+ENV PATH="$OUR_VENV/bin:$PATH"
 
 # Make directories as needed
-RUN mkdir -p ${APP_HOME} \
-             ${APP_SOURCE}
+RUN mkdir -p ${APP_HOME}
 
 # Set up python and pip
-RUN python${PYTHON_VERSION} -m venv $our_venv
+RUN python${PYTHON_VERSION} -m venv $OUR_VENV
 RUN pip3 install --upgrade pip==${PIP3_VERSION} \
     && pip3 install wheel \
                     virtualenv
 
-# Copy and install our private dependencies as individual layers
-# to maximize cache hits and minimize build time.
+# This container expects the name of the REPO passed in as a build argument
+ARG REPO
+ENV APP_SOURCE ${APP_HOME}/${REPO}
+RUN mkdir -p ${APP_SOURCE}
 
-# Now bring all of our requirement files in
-# and pip install as needed. These requirements change at their own pace
-# and more frequently than private repos which we might have installed above.
+# Now bring all of our requirement files in and pip install as needed.
 # Create a separate layer for each of the requirements files for maximum
 # caching performance. Ordered by general frequency of change, least-to-most.
-COPY --chown=leaf:leaf ${EXTERNAL_BUILD_ROOT}/requirements-build.txt ${APP_SOURCE}
-RUN /bin/bash -c "pip3 install -r <(sed '/git+https/d' ${APP_SOURCE}/requirements-build.txt)"
+# We use A COPY step before the pip install in the RUN step so that requirements
+# only changes cause a proper container rebuild.
+COPY --chown=${USERNAME}:${USERNAME} ${EXTERNAL_BUILD_ROOT}/requirements-build.txt ${APP_SOURCE}
+RUN /bin/bash -c "pip3 install -r ${APP_SOURCE}/requirements-build.txt"
 
-COPY --chown=leaf:leaf  ${EXTERNAL_BUILD_ROOT}/requirements.txt ${APP_SOURCE}
-RUN /bin/bash -c "pip3 install -r <(sed '/git+https/d' ${APP_SOURCE}/requirements.txt)"
-
-# leaf-common has no dependencies, so there is no pip install for that
+# Use the with_creds_requirements secret as the basis for the pip install
+# of the main requirements.  We still do the COPY first so the container
+# cache is properly broken on changes.
+#
+# NOTE: We expect the with_creds_requirement file to provide us with
+#       ephemeral GitHub creds from vault as the proper replacement mechanism
+#       for LEAF_SOURCE_CREDENTIALS.  This way, it's OK if these inherently
+#       short-lived happen to be stored in the container.
+COPY --chown=${USERNAME}:${USERNAME}  ${EXTERNAL_BUILD_ROOT}/requirements.txt ${APP_SOURCE}
+RUN --mount=type=secret,id=with_creds_requirements \
+    /bin/bash -c "pip3 install -r <(cat /run/secrets/with_creds_requirements)"
 
 # Now we copy the full source tree into the container, which will almost always
 # in practice break the cache since we build when code changes.
-COPY --chown=leaf:leaf . ${APP_HOME}
+USER ${USERNAME}
+COPY --chown=${USERNAME}:${USERNAME} . ${APP_HOME}
 
-ENV PYTHONPATH="${PYTHONPATH}:${APP_SOURCE}/leaf-common"
 WORKDIR ${APP_HOME}
