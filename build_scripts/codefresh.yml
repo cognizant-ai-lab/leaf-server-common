@@ -2,13 +2,6 @@ version: "1.0"
 
 steps:
 
-  start_clean:
-      title: Clean up CodeFresh volume
-      # Images come from hierarchy at: https://github.com/docker-library/python
-      image: alpine:3.13.1
-      commands:
-          - rm -rf leafbuild '${{CF_REPO_NAME}}' venv
-
   clone-repo:
       type: git-clone
       title: "Clone ${{CF_REPO_NAME}} repo"
@@ -61,6 +54,8 @@ steps:
     steps:
       run_pylint:
         title: Run pylint
+        # Use the image created by the repo_build step above
+        # See: https://codefresh.io/docs/docs/codefresh-yaml/variables/
         image: ${{repo_build}}
         description: "Run Pylint"
         working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
@@ -72,6 +67,8 @@ steps:
 
       run_flake8:
         title: Run flake8
+        # Use the image created by the repo_build step above
+        # See: https://codefresh.io/docs/docs/codefresh-yaml/variables/
         image: ${{repo_build}}
         description: "Run Flake8"
         working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
@@ -85,15 +82,18 @@ steps:
         title: Run Static Analysis on Shell Scripts
         description: "Run shellcheck tool on our shell scripts"
         type: "freestyle"
-        image: alpine:3.13.1
+        # Use the image created by the repo_build step above
+        # See: https://codefresh.io/docs/docs/codefresh-yaml/variables/
+        image: ${{repo_build}}
         working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         fail_fast: false
         commands:
-          - apk add --quiet --no-progress --upgrade shellcheck bash
           - ./build_scripts/run_shellcheck.sh
 
       run_unit_tests:
         title: Run unit tests
+        # Use the image created by the repo_build step above
+        # See: https://codefresh.io/docs/docs/codefresh-yaml/variables/
         image: ${{repo_build}}
         description: Run unit tests (nosetests)
         working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
