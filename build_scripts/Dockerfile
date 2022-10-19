@@ -15,6 +15,10 @@ ENV USERNAME leaf
 RUN apt-get update -y
 RUN apt-get install curl git -y
 
+# Install shellcheck test utility.
+# Get all our apt-get installs out of the way early
+RUN apt-get install shellcheck -y
+
 RUN  adduser --disabled-password --gecos '' ${USERNAME}
 
 # Change EXTERNAL_BUILD_ROOT to . if debugging locally
