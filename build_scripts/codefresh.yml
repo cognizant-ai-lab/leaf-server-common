@@ -2,53 +2,91 @@ version: "1.0"
 
 steps:
 
-  clone_repo_and_private_dependencies:
-    title: "Clone target repo and private git dependencies."
-    type: "leaf-ai/private-python-dependency:2.1.0"
-    # The target repo and branch refer to the top level
-    # repo that contains some private dependencies.
-    # SEARCH_ROOT root specifies where to look for the
-    # requirements.txt file.
-    arguments:
-      TARGET_REPO: ${{CF_REPO_NAME}}
-      TARGET_BRANCH: ${{CF_BRANCH}}
-      SEARCH_ROOT: '.'
+  start_clean:
+      title: Clean up CodeFresh volume
+      # Images come from hierarchy at: https://github.com/docker-library/python
+      image: alpine:3.13.1
+      commands:
+          - rm -rf leafbuild '${{CF_REPO_NAME}}' venv
 
-  leaf_server_common_build:
+  clone-repo:
+      type: git-clone
+      title: "Clone ${{CF_REPO_NAME}} repo"
+      repo: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
+      git: github
+      revision: "${{CF_REVISION}}"
+
+  create-temp-git-creds-from-vault:
+      title: "Get temporary git credentials from vault server.
+            Create credential for use in docker secret with_creds_requirements build step"
+      type: "freestyle"
+      image: "vault:1.12.0"
+      working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
+
+      # Disable all caching for this step to ensure the requirements file
+      # is always up to date. This step is very quick so the time hit
+      # is minimal.
+      # disable docker local cache
+      no_cache: true
+      # disable codefresh additional caching mechanisms
+      no_cf_cache: true
+
+      commands:
+        - vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}} | grep -v "token " | grep -v "token_accessor"
+        - EPHEMERAL_TOKEN=`vault read -address=${{VAULT}} -field=token /github-secrets/token/repo-read`
+        - USE_LEAF_SOURCE_CREDENTIALS="x-access-token:${EPHEMERAL_TOKEN}"
+        - cp requirements.txt with_creds_requirements.txt
+        - sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${USE_LEAF_SOURCE_CREDENTIALS}/g" with_creds_requirements.txt
+
+  repo_build:
       title: "Building Docker image"
       type: "build"
-      image_name: "leaf/leaf-server-common"
-      dockerfile: "leaf-server-common/build_scripts/Dockerfile"
+      image_name: "leaf/${{CF_REPO_NAME}}"
+      working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
+      dockerfile: "build_scripts/Dockerfile"
+      buildkit: true
+      # Docker BuildKit has different output. This progress plain allows
+      # us to see the "old" style output which is useful.
+      progress: "plain"
+      # The src refers to our secret file on the host system. Within the
+      # dockerfile we refer to the secret by id. By not providing a dst
+      # the file ends up at the docker default of /run/secrets/<id>
+      secrets:
+        - id=with_creds_requirements,src=with_creds_requirements.txt
+      build_arguments:
+        - REPO=${{CF_REPO_NAME}}
 
   run_all_tests:
     type: parallel
     steps:
       run_pylint:
         title: Run pylint
-        image: ${{leaf_server_common_build}}
+        image: ${{repo_build}}
         description: "Run Pylint"
-        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         # Allow the pipeline to continue if this step fails
         fail_fast: false
         commands:
+          - pip3 freeze
           - build_scripts/run_pylint.sh
 
       run_flake8:
         title: Run flake8
-        image: ${{leaf_server_common_build}}
+        image: ${{repo_build}}
         description: "Run Flake8"
-        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         # Allow the pipeline to continue if this step fails
         fail_fast: false
         commands:
-          - flake8 --max-line-length 120 --exclude artifacts,build_scripts,deployment,leaf-common,esp-sdk
+          - pip3 freeze
+          - flake8 --max-line-length 120 --exclude artifacts,build_scripts,deployment
 
       run_shellcheck:
         title: Run Static Analysis on Shell Scripts
         description: "Run shellcheck tool on our shell scripts"
         type: "freestyle"
         image: alpine:3.13.1
-        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         fail_fast: false
         commands:
           - apk add --quiet --no-progress --upgrade shellcheck bash
@@ -56,14 +94,12 @@ steps:
 
       run_unit_tests:
         title: Run unit tests
-        image: ${{leaf_server_common_build}}
+        image: ${{repo_build}}
         description: Run unit tests (nosetests)
-        working_directory: ${{CF_VOLUME_PATH}}/leaf-server-common
+        working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         fail_fast: false
-        environment:
-          - ESP_SERVICE_USER=${{AUTH0_USERNAME}}
-          - ESP_SERVICE_PASSWORD=${{AUTH0_PASSWORD}}
         commands:
+          - pip3 freeze
           - nosetests -v --nocapture --with-ignore-docstrings --with-timer --timer-top-n 10 --timer-ok 30s --timer-warning 60s
 
   all_test_status:
@@ -75,9 +111,9 @@ steps:
       when:
         condition:
           any:
-            static_test_fail: 
-              steps.run_pylint.result == 'failure' || 
-              steps.run_flake8.result == 'failure' || 
-              steps.run_shellcheck.result == 'failure' || 
-              steps.run_unit_tests == 'failure' ||
-              steps.run_all_tests == 'failure'
+            static_test_fail:
+              steps.run_pylint.result == "failure" ||
+              steps.run_flake8.result == "failure" ||
+              steps.run_shellcheck.result == "failure" ||
+              steps.run_unit_tests == "failure" ||
+              steps.run_all_tests == "failure"
