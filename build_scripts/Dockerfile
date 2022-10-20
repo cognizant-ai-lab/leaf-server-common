@@ -9,7 +9,6 @@ ENV LANG C.UTF-8
 ENV PYTHON_VERSION 3.8
 ENV PIP3_VERSION 22.3
 ENV DEBIAN_FRONTEND noninteractive
-ENV USERNAME leaf
 
 # Debian basics
 RUN apt-get update -y
@@ -19,14 +18,15 @@ RUN apt-get install curl git -y
 # Get all our apt-get installs out of the way early
 RUN apt-get install shellcheck -y
 
-RUN  adduser --disabled-password --gecos '' ${USERNAME}
-
 # Change EXTERNAL_BUILD_ROOT to . if debugging locally
 ENV EXTERNAL_BUILD_ROOT .
 
+ARG USERNAME leaf
+RUN  adduser --disabled-password --gecos '' ${USERNAME}
+
 # The APP_HOME home is our root directory within the image
 # where we place the repo's source directory.
-ENV APP_HOME /home/${USERNAME}
+ARG APP_HOME /home/${USERNAME}
 
 ENV OUR_VENV ${APP_HOME}/venv/python-${PYTHON_VERSION}
 ENV PATH="$OUR_VENV/bin:$PATH"
@@ -40,9 +40,8 @@ RUN pip3 install --upgrade pip==${PIP3_VERSION} \
     && pip3 install wheel \
                     virtualenv
 
-# This container expects the name of the REPO passed in as a build argument
 ARG REPO
-ENV APP_SOURCE ${APP_HOME}/${REPO}
+ARG APP_SOURCE ${APP_HOME}/${REPO}
 RUN mkdir -p ${APP_SOURCE}
 
 # Now bring all of our requirement files in and pip install as needed.
@@ -67,7 +66,8 @@ RUN --mount=type=secret,id=with_creds_requirements \
 
 # Now we copy the full source tree into the container, which will almost always
 # in practice break the cache since we build when code changes.
-USER ${USERNAME}
-COPY --chown=${USERNAME}:${USERNAME} . ${APP_HOME}
+# We do this after all the requirements are installed as code changes more often than requirements
+COPY --chown=${USERNAME}:${USERNAME} . ${APP_SOURCE}
 
+USER ${USERNAME}
 WORKDIR ${APP_HOME}
