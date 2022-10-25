@@ -45,16 +45,19 @@ steps:
         no_cf_cache: true
 
         commands:
-            - vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}} | grep -v "token " | grep -v "token_accessor"
-            - EPHEMERAL_TOKEN=`vault read -address=${{VAULT}} -field=token /github-secrets/token/repo-read`
-            - EPHEMERAL_LEAF_SOURCE_CREDENTIALS="x-access-token:${EPHEMERAL_TOKEN}"
-
             # Specifically use the temp directory outside the container we want to build
             # so as not to accidentally copy sensitive credentials inside of it.
             - export WITH_CREDS_REQUIREMENTS=${{TEMP_DIR_OUTSIDE_CONTAINER}}/with_creds_requirements.txt
             - cp requirements.txt ${WITH_CREDS_REQUIREMENTS}
-            - sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_SOURCE_CREDENTIALS}/g" ${WITH_CREDS_REQUIREMENTS}
             - cf_export WITH_CREDS_REQUIREMENTS
+
+            # Login into Vault only once
+            - vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}} | grep -v "token " | grep -v "token_accessor"
+
+            # Get the ephemeral token for public repos
+            - EPHEMERAL_TOKEN=`vault read -address=${{VAULT}} -field=token /github-secrets/token/repo-read`
+            - EPHEMERAL_LEAF_SOURCE_CREDENTIALS="x-access-token:${EPHEMERAL_TOKEN}"
+            - sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_SOURCE_CREDENTIALS}/g" ${WITH_CREDS_REQUIREMENTS}
 
     repo_build:
         title: "Building Docker image for ${{CF_REPO_NAME}}"
