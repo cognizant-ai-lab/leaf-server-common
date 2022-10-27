@@ -52,10 +52,10 @@ steps:
             - cf_export WITH_CREDS_REQUIREMENTS
 
             # Login into Vault only once
-            - vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}} | grep -v "token " | grep -v "token_accessor"
+            - vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}} | grep -Ev "(token |token_accessor)"
 
             # Get the ephemeral token for public repos
-            - EPHEMERAL_TOKEN=`vault read -address=${{VAULT}} -field=token /github-secrets/token/repo-read`
+            - EPHEMERAL_TOKEN=$(vault read -address=${{VAULT}} -field=token /github-secrets/token/repo-read)
             - EPHEMERAL_LEAF_SOURCE_CREDENTIALS="x-access-token:${EPHEMERAL_TOKEN}"
             - sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_SOURCE_CREDENTIALS}/g" ${WITH_CREDS_REQUIREMENTS}
 
@@ -63,6 +63,7 @@ steps:
         title: "Building Docker image for ${{CF_REPO_NAME}}"
         type: "build"
         image_name: "leaf/${{CF_REPO_NAME}}"
+        tag: ${{CF_BRANCH_TAG_NORMALIZED}}-${{CF_SHORT_REVISION}}
         working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         dockerfile: "build_scripts/Dockerfile"
         buildkit: true

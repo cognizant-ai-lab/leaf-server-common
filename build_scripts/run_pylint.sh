@@ -48,7 +48,10 @@ echo "Running pylint on directories '${use_dirs}':"
 pylint --load-plugins=pylint_protobuf -j 0 -rn --rcfile=${RCFILE} ${use_dirs}
 retval=$?
 
-# If we got this far, all is well
-echo "Pylint complete. No issues found."
+if [ ${retval} == 0 ]
+then
+    # If we got this far, all is well
+    echo "Pylint complete. No issues found."
+fi
 
 exit ${retval}
