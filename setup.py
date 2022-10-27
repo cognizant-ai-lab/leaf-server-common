@@ -44,6 +44,10 @@ setup(
     python_requires=f'>={REQUIRED_PYTHON[0]}.{REQUIRED_PYTHON[1]}',
     packages=find_packages('.', exclude=['tests*', 'build_scripts*']),
     install_requires=[
+        # GitHib dependencies have issues with using tokens as source credentials
+        # so we do not include them here. Client code just as to know (sorry).
+        # At least acknowledge that we have a source-available dependency
+
         # f"leaf-common @ git+https://github.com/leaf-ai/leaf-common.git@{LEAF_COMMON_VERSION}#egg=leaf-common",
         "grpcio==1.46.3",
         "grpcio-health-checking==1.46.3",
