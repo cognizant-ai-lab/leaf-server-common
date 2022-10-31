@@ -52,12 +52,16 @@ steps:
             - cf_export WITH_CREDS_REQUIREMENTS
 
             # Login into Vault only once
-            - vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}} | grep -Ev "(token |token_accessor)"
+            - >-
+                vault login -address=${{VAULT}} -method=github token=${{VAULT_LOGIN}}
+                | grep -Ev "(token |token_accessor)"
 
             # Get the ephemeral token for public repos
             - EPHEMERAL_TOKEN=$(vault read -address=${{VAULT}} -field=token /github-secrets/token/repo-read)
             - EPHEMERAL_LEAF_SOURCE_CREDENTIALS="x-access-token:${EPHEMERAL_TOKEN}"
-            - sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_SOURCE_CREDENTIALS}/g" ${WITH_CREDS_REQUIREMENTS}
+            - >-
+                sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_SOURCE_CREDENTIALS}/g"
+                ${WITH_CREDS_REQUIREMENTS}
 
     repo_build:
         title: "Building Docker image for ${{CF_REPO_NAME}}"
@@ -141,7 +145,10 @@ steps:
                 fail_fast: false
                 commands:
                     - pip3 freeze
-                    - nosetests -v --nocapture --with-ignore-docstrings --with-timer --timer-top-n 10 --timer-ok 30s --timer-warning 60s
+                    - >-
+                        nosetests -v --nocapture --with-ignore-docstrings
+                        --with-timer --timer-top-n 10
+                        --timer-ok 30s --timer-warning 60s
 
     clean_up:
         description: "Clean up after ourselves"
