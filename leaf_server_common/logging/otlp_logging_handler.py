@@ -23,6 +23,7 @@ OTLP_SPAN_ID_KEY = "span_id_key"
 OTLP_ENDPOINT_KEY = "endpoint"
 OTLP_CERTIFICATE_KEY = "certificate_file"
 
+
 class OTLPLoggingHandler(logging.Handler):
     """
     Python logging handler that sends log messages to Open-telemetry collector.
@@ -58,7 +59,6 @@ class OTLPLoggingHandler(logging.Handler):
             OTLPLogExporter(endpoint=self.endpoint,
                             certificate_file=self.certificate_file)
 
-
     def emit(self, record: logging.LogRecord):
 
         if self._already_called:
@@ -78,11 +78,13 @@ class OTLPLoggingHandler(logging.Handler):
         span_id_val = self._get_substitute_key(self.span_id_key, 0, record)
 
         try:
-            lrec = LogRecord(body=formatted, span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
-                         severity_number=SeverityNumber.UNSPECIFIED, resource=_DEFAULT_RESOURCE)
+            lrec = LogRecord(body=formatted,
+                             span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
+                             severity_number=SeverityNumber.UNSPECIFIED,
+                             resource=_DEFAULT_RESOURCE)
             ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
             self.exporter.export([ldata])
-        except BaseException as exc:
+        except Exception as exc:
             print(f"FAILED to send OTLP log data: {exc}")
         finally:
             self._already_called = False
@@ -97,7 +99,7 @@ class OTLPLoggingHandler(logging.Handler):
             return default_value
         try:
             return int(subst_value)
-        except BaseException:
+        except Exception:
             return default_value
 
     def handleError(self, record: LogRecord):
