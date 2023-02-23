@@ -1,5 +1,5 @@
 
-# Copyright (C) 2019-2022 Cognizant Digital Business, Evolutionary AI.
+# Copyright (C) 2019-2023 Cognizant Digital Business, Evolutionary AI.
 # All Rights Reserved.
 # Issued under the Academic Public License.
 #
@@ -10,7 +10,6 @@
 #
 # END COPYRIGHT
 
-import json
 import logging
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -18,6 +17,11 @@ from opentelemetry.sdk._logs._internal import LogData, LogRecord
 from opentelemetry.sdk.resources import _DEFAULT_RESOURCE
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from opentelemetry._logs.severity import SeverityNumber
+
+OTLP_TRACE_ID_KEY = "trace_id_key"
+OTLP_SPAN_ID_KEY = "span_id_key"
+OTLP_ENDPOINT_KEY = "endpoint"
+OTLP_CERTIFICATE_KEY = "certificate_file"
 
 class OTLPLoggingHandler(logging.Handler):
     """
@@ -32,16 +36,34 @@ class OTLPLoggingHandler(logging.Handler):
     def __init__(self, level=logging.NOTSET, **kwargs):
         super().__init__(level)
 
+        # This variable prevents infinite recursion when init gets passed
+        # debug=True
+        self._already_called = False
+
         # In case log records don't have all the fields we need.
         # This happens in some print() statements during the early stages
         # of service setup.
         self._backup_formatter = logging.Formatter()
 
-        self.exporter = OTLPLogExporter()
-        print(f"OTLPLogHandler called with {kwargs}")
+        # endpoint and certificate file for target OTLP collector:
+        self.endpoint: str = kwargs.get(OTLP_ENDPOINT_KEY, None)
+        self.certificate_file = kwargs.get(OTLP_CERTIFICATE_KEY, None)
+
+        # Get the names for LogRecord members which we want to serve
+        # as "trace_id" and "span_id" elements in outgoing OTLP log message:
+        self.trace_id_key: str = kwargs.get(OTLP_TRACE_ID_KEY, None)
+        self.span_id_key: str = kwargs.get(OTLP_SPAN_ID_KEY, None)
+
+        self.exporter = \
+            OTLPLogExporter(endpoint=self.endpoint,
+                            certificate_file=self.certificate_file)
+
 
     def emit(self, record: logging.LogRecord):
-        print(f"OTLPLogHandler: {record}")
+
+        if self._already_called:
+            return
+        self._already_called = True
 
         # Try using our basic formatting.
         try:
@@ -50,13 +72,33 @@ class OTLPLoggingHandler(logging.Handler):
             # That didn't work. Now try using something stock
             formatted = self._backup_formatter.format(record)
 
-        lrec = LogRecord(body=formatted, span_id=1, trace_id=1, trace_flags=128, severity_number=SeverityNumber.UNSPECIFIED, resource=_DEFAULT_RESOURCE)
-        ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name="xyz"))
+        # Try to extract LogRecord elements that will work
+        # as our "trace_id" and "span_id" keys:
+        trace_id_val = self._get_substitute_key(self.trace_id_key, 0, record)
+        span_id_val = self._get_substitute_key(self.span_id_key, 0, record)
+
         try:
+            lrec = LogRecord(body=formatted, span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
+                         severity_number=SeverityNumber.UNSPECIFIED, resource=_DEFAULT_RESOURCE)
+            ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
             self.exporter.export([ldata])
         except BaseException as exc:
             print(f"FAILED to send OTLP log data: {exc}")
+        finally:
+            self._already_called = False
 
+    def _get_substitute_key(self, key: str, default_value: int, record: logging.LogRecord) -> int:
+        if key is None:
+            return default_value
+        subst_value = record.__dict__.get(key, None)
+        if subst_value is None:
+            return default_value
+        if isinstance(subst_value, str) and subst_value.lower() == "none":
+            return default_value
+        try:
+            return int(subst_value)
+        except BaseException:
+            return default_value
 
     def handleError(self, record: LogRecord):
         """
