@@ -22,9 +22,6 @@ grpcio-tools==1.46.3
 # Pinning to older version of protobuf required for tensorflow==2.9.1
 protobuf==3.19.5
 
-# Honeycomb logging
-libhoney==2.0.0
-
 # Open-telemetry logging
 opentelemetry-api==1.15.0
 opentelemetry-sdk==1.15.0
