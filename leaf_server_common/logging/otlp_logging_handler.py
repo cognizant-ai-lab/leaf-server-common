@@ -84,7 +84,10 @@ class OTLPLoggingHandler(logging.Handler):
                              resource=_DEFAULT_RESOURCE)
             ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
             self.exporter.export([ldata])
-        except Exception as exc:
+        # pylint: disable=broad-except
+        except BaseException as exc:
+            # We want to catch as much as possible here:
+            # don't really care about failures in logging.
             print(f"FAILED to send OTLP log data: {exc}")
         finally:
             self._already_called = False
@@ -99,7 +102,7 @@ class OTLPLoggingHandler(logging.Handler):
             return default_value
         try:
             return int(subst_value)
-        except Exception:
+        except ValueError:
             return default_value
 
     def handleError(self, record: LogRecord):
