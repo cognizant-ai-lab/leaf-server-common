@@ -23,15 +23,31 @@ OTLP_SPAN_ID_KEY = "span_id_key"
 OTLP_ENDPOINT_KEY = "endpoint"
 OTLP_CERTIFICATE_KEY = "certificate_file"
 
-
 class OTLPLoggingHandler(logging.Handler):
     """
     Python logging handler that sends log messages to Open-telemetry collector.
     Services typically instantiate one of these
     by configuring the logging.json file for their service.
-
+u
     Note that we use print() in here, as this stuff gets called when
     logging is just getting set up.
+
+    This is sample OTLPLoggingHandler configuration:
+    "handlers": {
+        "otlp": {
+            "class": "leaf_server_common.logging.otlp_logging_handler.OTLPLoggingHandler",
+            "level": "INFO",
+            # endpoint for OTLP collector
+            "endpoint": "http://localhost:4318/v1/logs",
+            # "substitution" keys: specify key names to be extracted
+            # from LogRecord dictionary and put in "trace_id" and "span_id"
+            # fields of outgoing OTLP Logger record.
+            # This is done so we can better map our internal logging data structures
+            # into values expected by OTLP backends (trace_id, span_id)
+            "trace_id_key": "run_id",
+            "span_id_key": "request_id"
+        }
+    },
     """
 
     def __init__(self, level=logging.NOTSET, **kwargs):
