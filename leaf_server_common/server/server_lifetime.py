@@ -95,16 +95,6 @@ class ServerLifetime(RequestLogger):
         self.server_name_for_logs = server_name_for_logs
         self.port = port
         self.logger = logger
-        self.default_extra_logging_fields = {
-            "source": self.server_name_for_logs,
-            "thread_name": "Unknown",
-            "request_id": "None",
-            "user_id": "None",
-            "group_id": "None",
-            "run_id": "None",
-            "experiment_id": "None"
-        }
-        self._setup_logging(default_log_dir, log_config_env, log_level_env)
 
         # Set up the remaining member variables from args
         self.server_name = server_name
@@ -193,49 +183,6 @@ class ServerLifetime(RequestLogger):
 
         # Finally stop the service
         self.server.stop(None)
-
-    def setup_extra_logging_fields(self, context=None):
-        """
-        Sets up extra thread-specific fields to be logged with each
-        log message.
-
-        :param context: The grpc.ServicerContext. Default is None
-        """
-
-        extra = copy.copy(self.default_extra_logging_fields)
-        extra["thread_name"] = current_thread().name
-
-        # Get information from the GRPC client context that is to be
-        # put into the logs.
-        if context is not None:
-            metadata = context.invocation_metadata()
-            metadata_dict = GrpcMetadataUtil.to_dict(metadata)
-
-            # Add fields from the GRPC Header metadata to the logging info
-            request_id = metadata_dict.get("request_id", None)
-            if request_id is not None:
-                extra["request_id"] = str(request_id)
-
-            user_id = metadata_dict.get("user_id", None)
-            if user_id is not None:
-                extra["user_id"] = str(user_id)
-
-            group_id = metadata_dict.get("group_id", None)
-            if group_id is not None:
-                extra["group_id"] = str(group_id)
-
-            experiment_id = metadata_dict.get("experiment_id", None)
-            if experiment_id is not None:
-                extra["experiment_id"] = str(experiment_id)
-
-            run_id = metadata_dict.get("run_id", None)
-            if run_id is not None:
-                extra["run_id"] = str(run_id)
-
-        # Create the ServiceLogRecord thread-local context.
-        # In doing so like this, we actually are setting up global variables.
-        service_log_record = ServiceLogRecord()
-        service_log_record.set_logging_fields_dict(extra)
 
     def start_request(self, caller, requestor_id, context):
         """
@@ -336,29 +283,6 @@ class ServerLifetime(RequestLogger):
         :return: The server name for the logs
         """
         return self.server_name_for_logs
-
-    def _setup_logging(self, default_log_dir, log_config_env, log_level_env):
-        """
-        Called by constructor
-        """
-
-        logging_setup = LoggingSetup(default_log_config_dir=default_log_dir,
-                                     default_log_config_file="logging.json",
-                                     default_log_level="DEBUG",
-                                     log_config_env=log_config_env,
-                                     log_level_env=log_level_env)
-        logging_setup.setup()
-
-        # Enable translation of log message args to MessageType
-        StructuredLogRecord.set_up_record_factory()
-
-        # Enable thread-local information to go into log messages
-        ServiceLogRecord.set_up_record_factory(self.default_extra_logging_fields)
-        self.setup_extra_logging_fields()
-
-        self.logger.info("Starting %s on port %s...",
-                         str(self.server_name_for_logs),
-                         str(self.port))
 
     def _get_num_processing(self):
         return self.stats.get('NumProcessing', 0)
