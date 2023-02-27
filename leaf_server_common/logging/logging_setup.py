@@ -21,8 +21,9 @@ from leaf_server_common.logging.service_log_record \
 from leaf_server_common.logging.structured_log_record \
     import StructuredLogRecord
 
-def _setup_extra_logging_fields(context=None,
-                                extra_logging_fields=None):
+
+def setup_extra_logging_fields(context=None,
+                               extra_logging_fields=None):
     """
     Sets up extra thread-specific fields to be logged with each
     log message.
@@ -65,8 +66,9 @@ def _setup_extra_logging_fields(context=None,
     service_log_record = ServiceLogRecord()
     service_log_record.set_logging_fields_dict(extra)
 
-def SetupLogging(server_name_for_logs: str,
-                default_log_dir, log_config_env, log_level_env):
+
+def setup_logging(server_name_for_logs: str,
+                  default_log_dir, log_config_env, log_level_env):
     """
     Setup logging to be used by ServerLifeTime
     """
@@ -92,4 +94,4 @@ def SetupLogging(server_name_for_logs: str,
 
     # Enable thread-local information to go into log messages
     ServiceLogRecord.set_up_record_factory(default_extra_logging_fields)
-    _setup_extra_logging_fields(extra_logging_fields=default_extra_logging_fields)
+    setup_extra_logging_fields(extra_logging_fields=default_extra_logging_fields)

@@ -23,12 +23,13 @@ OTLP_SPAN_ID_KEY = "span_id_key"
 OTLP_ENDPOINT_KEY = "endpoint"
 OTLP_CERTIFICATE_KEY = "certificate_file"
 
+
 class OTLPLoggingHandler(logging.Handler):
     """
     Python logging handler that sends log messages to Open-telemetry collector.
     Services typically instantiate one of these
     by configuring the logging.json file for their service.
-u
+
     Note that we use print() in here, as this stuff gets called when
     logging is just getting set up.
 

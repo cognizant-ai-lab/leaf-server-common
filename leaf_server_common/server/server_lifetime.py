@@ -24,6 +24,8 @@ from grpc_reflection.v1alpha import reflection
 
 from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
 
+from leaf_server_common.logging.logging_setup \
+    import setup_extra_logging_fields
 from leaf_server_common.logging.request_logger_adapter \
     import RequestLoggerAdapter
 from leaf_server_common.server.request_logger import RequestLogger
@@ -187,7 +189,7 @@ class ServerLifetime(RequestLogger):
         """
 
         # Create the RequestLoggerAdapter
-        self.setup_extra_logging_fields(context)
+        setup_extra_logging_fields(context)
         request_log = RequestLoggerAdapter(self.logger, None)
 
         # Log that the request was received by the caller
@@ -204,7 +206,6 @@ class ServerLifetime(RequestLogger):
 
         # Update stats for the caller.
         # Take the lock because we are modifying stats
-        is_serving = True
         stats_str = ""
         with self.lock:
             is_serving = self._is_still_serving()
