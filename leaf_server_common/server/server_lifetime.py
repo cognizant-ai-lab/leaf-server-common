@@ -9,11 +9,9 @@
 # leaf-server-common SDK Software in commercial settings.
 #
 # END COPYRIGHT
-import copy
 import random
 import time
 
-from threading import current_thread
 from threading import RLock
 from concurrent import futures
 
@@ -24,15 +22,10 @@ from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
 from grpc_reflection.v1alpha import reflection
 
-from leaf_common.logging.logging_setup import LoggingSetup
 from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
 
 from leaf_server_common.logging.request_logger_adapter \
     import RequestLoggerAdapter
-from leaf_server_common.logging.service_log_record \
-    import ServiceLogRecord
-from leaf_server_common.logging.structured_log_record \
-    import StructuredLogRecord
 from leaf_server_common.server.request_logger import RequestLogger
 from leaf_server_common.server.server_loop_callbacks \
     import ServerLoopCallbacks
@@ -51,7 +44,7 @@ class ServerLifetime(RequestLogger):
     # Tied for Public Enemy #2 for too-many-instance-attributes
     # pylint: disable=too-many-instance-attributes,too-many-locals
     def __init__(self, server_name, server_name_for_logs, port,
-                 logger, default_log_dir, log_config_env, log_level_env,
+                 logger,
                  request_limit=-1, max_workers=10, max_concurrent_rpcs=None,
                  protocol_services_by_name_values=None,
                  loop_sleep_seconds: float = ONE_MINUTE_IN_SECONDS,
@@ -65,9 +58,6 @@ class ServerLifetime(RequestLogger):
                 purposes
         :param port: the port which will recieve requests
         :param logger: the logger to send output to
-        :param default_log_dir: the default directory for logs
-        :param log_config_env: the environment variable for logging config
-        :param log_level_env: the environment variable for logging level
         :param request_limit: the maximum number of requests handled by the
                             service until the service attempts to exit and
                             restart to free up resource leaks. By default this
