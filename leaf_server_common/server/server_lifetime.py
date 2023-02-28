@@ -9,11 +9,9 @@
 # leaf-server-common SDK Software in commercial settings.
 #
 # END COPYRIGHT
-import copy
 import random
 import time
 
-from threading import current_thread
 from threading import RLock
 from concurrent import futures
 
@@ -24,15 +22,12 @@ from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
 from grpc_reflection.v1alpha import reflection
 
-from leaf_common.logging.logging_setup import LoggingSetup
 from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
 
+from leaf_server_common.logging.logging_setup \
+    import setup_extra_logging_fields
 from leaf_server_common.logging.request_logger_adapter \
     import RequestLoggerAdapter
-from leaf_server_common.logging.service_log_record \
-    import ServiceLogRecord
-from leaf_server_common.logging.structured_log_record \
-    import StructuredLogRecord
 from leaf_server_common.server.request_logger import RequestLogger
 from leaf_server_common.server.server_loop_callbacks \
     import ServerLoopCallbacks
@@ -51,7 +46,7 @@ class ServerLifetime(RequestLogger):
     # Tied for Public Enemy #2 for too-many-instance-attributes
     # pylint: disable=too-many-instance-attributes,too-many-locals
     def __init__(self, server_name, server_name_for_logs, port,
-                 logger, default_log_dir, log_config_env, log_level_env,
+                 logger,
                  request_limit=-1, max_workers=10, max_concurrent_rpcs=None,
                  protocol_services_by_name_values=None,
                  loop_sleep_seconds: float = ONE_MINUTE_IN_SECONDS,
@@ -65,9 +60,6 @@ class ServerLifetime(RequestLogger):
                 purposes
         :param port: the port which will recieve requests
         :param logger: the logger to send output to
-        :param default_log_dir: the default directory for logs
-        :param log_config_env: the environment variable for logging config
-        :param log_level_env: the environment variable for logging level
         :param request_limit: the maximum number of requests handled by the
                             service until the service attempts to exit and
                             restart to free up resource leaks. By default this
@@ -95,19 +87,13 @@ class ServerLifetime(RequestLogger):
         self.server_name_for_logs = server_name_for_logs
         self.port = port
         self.logger = logger
-        self.default_extra_logging_fields = {
-            "source": self.server_name_for_logs,
-            "thread_name": "Unknown",
-            "request_id": "None",
-            "user_id": "None",
-            "group_id": "None",
-            "run_id": "None",
-            "experiment_id": "None"
-        }
-        self._setup_logging(default_log_dir, log_config_env, log_level_env)
 
         # Set up the remaining member variables from args
         self.server_name = server_name
+
+        self.logger.info("Starting %s on port %s...",
+                         str(self.server_name_for_logs),
+                         str(self.port))
 
         # Lower and upper bounds for number of requests before shutting down
         if request_limit == -1:
@@ -194,49 +180,6 @@ class ServerLifetime(RequestLogger):
         # Finally stop the service
         self.server.stop(None)
 
-    def setup_extra_logging_fields(self, context=None):
-        """
-        Sets up extra thread-specific fields to be logged with each
-        log message.
-
-        :param context: The grpc.ServicerContext. Default is None
-        """
-
-        extra = copy.copy(self.default_extra_logging_fields)
-        extra["thread_name"] = current_thread().name
-
-        # Get information from the GRPC client context that is to be
-        # put into the logs.
-        if context is not None:
-            metadata = context.invocation_metadata()
-            metadata_dict = GrpcMetadataUtil.to_dict(metadata)
-
-            # Add fields from the GRPC Header metadata to the logging info
-            request_id = metadata_dict.get("request_id", None)
-            if request_id is not None:
-                extra["request_id"] = str(request_id)
-
-            user_id = metadata_dict.get("user_id", None)
-            if user_id is not None:
-                extra["user_id"] = str(user_id)
-
-            group_id = metadata_dict.get("group_id", None)
-            if group_id is not None:
-                extra["group_id"] = str(group_id)
-
-            experiment_id = metadata_dict.get("experiment_id", None)
-            if experiment_id is not None:
-                extra["experiment_id"] = str(experiment_id)
-
-            run_id = metadata_dict.get("run_id", None)
-            if run_id is not None:
-                extra["run_id"] = str(run_id)
-
-        # Create the ServiceLogRecord thread-local context.
-        # In doing so like this, we actually are setting up global variables.
-        service_log_record = ServiceLogRecord()
-        service_log_record.set_logging_fields_dict(extra)
-
     def start_request(self, caller, requestor_id, context):
         """
         Called by client services to mark the beginning of a request
@@ -250,7 +193,11 @@ class ServerLifetime(RequestLogger):
         """
 
         # Create the RequestLoggerAdapter
-        self.setup_extra_logging_fields(context)
+        metadata_dict = None
+        if context is not None:
+            metadata = context.invocation_metadata()
+            metadata_dict = GrpcMetadataUtil.to_dict(metadata)
+        setup_extra_logging_fields(metadata_dict)
         request_log = RequestLoggerAdapter(self.logger, None)
 
         # Log that the request was received by the caller
@@ -259,15 +206,11 @@ class ServerLifetime(RequestLogger):
 
         # Maybe log the request metadata
         if self.log_request_metadata and \
-                context is not None:
-
-            metadata = context.invocation_metadata()
-            metadata_dict = GrpcMetadataUtil.to_dict(metadata)
+                metadata_dict is not None:
             request_log.api("Request metadata %s", str(metadata_dict))
 
         # Update stats for the caller.
         # Take the lock because we are modifying stats
-        is_serving = True
         stats_str = ""
         with self.lock:
             is_serving = self._is_still_serving()
@@ -336,29 +279,6 @@ class ServerLifetime(RequestLogger):
         :return: The server name for the logs
         """
         return self.server_name_for_logs
-
-    def _setup_logging(self, default_log_dir, log_config_env, log_level_env):
-        """
-        Called by constructor
-        """
-
-        logging_setup = LoggingSetup(default_log_config_dir=default_log_dir,
-                                     default_log_config_file="logging.json",
-                                     default_log_level="DEBUG",
-                                     log_config_env=log_config_env,
-                                     log_level_env=log_level_env)
-        logging_setup.setup()
-
-        # Enable translation of log message args to MessageType
-        StructuredLogRecord.set_up_record_factory()
-
-        # Enable thread-local information to go into log messages
-        ServiceLogRecord.set_up_record_factory(self.default_extra_logging_fields)
-        self.setup_extra_logging_fields()
-
-        self.logger.info("Starting %s on port %s...",
-                         str(self.server_name_for_logs),
-                         str(self.port))
 
     def _get_num_processing(self):
         return self.stats.get('NumProcessing', 0)
