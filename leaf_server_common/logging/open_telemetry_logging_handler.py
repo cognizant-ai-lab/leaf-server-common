@@ -21,7 +21,16 @@ from opentelemetry._logs.severity import SeverityNumber
 
 OTLP_TRACE_ID_KEY = "trace_id_key"
 OTLP_SPAN_ID_KEY = "span_id_key"
+
+# In OpenTelemetryLoggingHandler configuration parameters,
+# this key specifies OpenTelemetry collector endpoint
+# to be used for exporting logs.
 OTLP_ENDPOINT_KEY = "endpoint"
+
+# In OpenTelemetryLoggingHandler configuration parameters,
+# this key specifies a path to certificate file to be used
+# if our connection to OpenTelemetry collector is TLS encrypted.
+# Otherwise it should be omitted.
 OTLP_CERTIFICATE_KEY = "certificate_file"
 
 
