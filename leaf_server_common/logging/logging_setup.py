@@ -22,13 +22,14 @@ from leaf_server_common.logging.structured_log_record \
     import StructuredLogRecord
 
 
-def setup_extra_logging_fields(metadata_dict: Dict[str, Any]=None,
+def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
                                extra_logging_fields=None):
     """
     Sets up extra thread-specific fields to be logged with each
     log message.
 
     :param metadata_dict: Metadata dictionary. Default is None
+    :param extra_logging_fields: Additional fields dictionary. Default is None
     """
 
     extra = copy.copy(extra_logging_fields) if extra_logging_fields else {}
