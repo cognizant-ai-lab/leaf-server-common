@@ -12,23 +12,23 @@
 
 import copy
 from threading import current_thread
+from typing import Any, Dict
 
-from leaf_common.logging.logging_setup import LoggingSetup
-from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
-
+from leaf_common.logging.logging_setup \
+    import LoggingSetup
 from leaf_server_common.logging.service_log_record \
     import ServiceLogRecord
 from leaf_server_common.logging.structured_log_record \
     import StructuredLogRecord
 
 
-def setup_extra_logging_fields(context=None,
+def setup_extra_logging_fields(metadata_dict: Dict[str, Any]=None,
                                extra_logging_fields=None):
     """
     Sets up extra thread-specific fields to be logged with each
     log message.
 
-    :param context: The grpc.ServicerContext. Default is None
+    :param metadata_dict: Metadata dictionary. Default is None
     """
 
     extra = copy.copy(extra_logging_fields) if extra_logging_fields else {}
@@ -36,9 +36,7 @@ def setup_extra_logging_fields(context=None,
 
     # Get information from the GRPC client context that is to be
     # put into the logs.
-    if context is not None:
-        metadata = context.invocation_metadata()
-        metadata_dict = GrpcMetadataUtil.to_dict(metadata)
+    if metadata_dict is not None:
 
         # Add fields from the GRPC Header metadata to the logging info
         request_id = metadata_dict.get("request_id", None)

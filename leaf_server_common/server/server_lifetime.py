@@ -91,6 +91,10 @@ class ServerLifetime(RequestLogger):
         # Set up the remaining member variables from args
         self.server_name = server_name
 
+        self.logger.info("Starting %s on port %s...",
+                         str(self.server_name_for_logs),
+                         str(self.port))
+
         # Lower and upper bounds for number of requests before shutting down
         if request_limit == -1:
             # Unlimited requests
@@ -189,7 +193,11 @@ class ServerLifetime(RequestLogger):
         """
 
         # Create the RequestLoggerAdapter
-        setup_extra_logging_fields(context)
+        metadata_dict = None
+        if context is not None:
+            metadata = context.invocation_metadata()
+            metadata_dict = GrpcMetadataUtil.to_dict(metadata)
+        setup_extra_logging_fields(metadata_dict)
         request_log = RequestLoggerAdapter(self.logger, None)
 
         # Log that the request was received by the caller
@@ -198,10 +206,7 @@ class ServerLifetime(RequestLogger):
 
         # Maybe log the request metadata
         if self.log_request_metadata and \
-                context is not None:
-
-            metadata = context.invocation_metadata()
-            metadata_dict = GrpcMetadataUtil.to_dict(metadata)
+                metadata_dict is not None:
             request_log.api("Request metadata %s", str(metadata_dict))
 
         # Update stats for the caller.

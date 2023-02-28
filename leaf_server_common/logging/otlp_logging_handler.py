@@ -10,6 +10,7 @@
 #
 # END COPYRIGHT
 
+import json
 import logging
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -24,7 +25,7 @@ OTLP_ENDPOINT_KEY = "endpoint"
 OTLP_CERTIFICATE_KEY = "certificate_file"
 
 
-class OTLPLoggingHandler(logging.Handler):
+class OpenTelemetryLoggingHandler(logging.Handler):
     """
     Python logging handler that sends log messages to Open-telemetry collector.
     Services typically instantiate one of these
@@ -36,15 +37,15 @@ class OTLPLoggingHandler(logging.Handler):
     This is sample OTLPLoggingHandler configuration:
     "handlers": {
         "otlp": {
-            "class": "leaf_server_common.logging.otlp_logging_handler.OTLPLoggingHandler",
+            "class": "leaf_server_common.logging.otlp_logging_handler.OpenTelemetryLoggingHandler",
             "level": "INFO",
             # endpoint for OTLP collector
             "endpoint": "http://localhost:4318/v1/logs",
             # "substitution" keys: specify key names to be extracted
             # from LogRecord dictionary and put in "trace_id" and "span_id"
-            # fields of outgoing OTLP Logger record.
+            # fields of outgoing OpenTelemetry Logger record.
             # This is done so we can better map our internal logging data structures
-            # into values expected by OTLP backends (trace_id, span_id)
+            # into values expected by OpenTelemetry backends (trace_id, span_id)
             "trace_id_key": "run_id",
             "span_id_key": "request_id"
         }
@@ -63,12 +64,18 @@ class OTLPLoggingHandler(logging.Handler):
         # of service setup.
         self._backup_formatter = logging.Formatter()
 
-        # endpoint and certificate file for target OTLP collector:
+        # endpoint for target OpenTelemetry collector:
         self.endpoint: str = kwargs.get(OTLP_ENDPOINT_KEY, None)
+        # path to certificate file to be used if our connection
+        # to OpenTelemetry collector is TLS encrypted.
+        # Should be None otherwise.
         self.certificate_file = kwargs.get(OTLP_CERTIFICATE_KEY, None)
 
         # Get the names for LogRecord members which we want to serve
-        # as "trace_id" and "span_id" elements in outgoing OTLP log message:
+        # as "trace_id" and "span_id" elements in outgoing OpenTelemetry log message:
+        # This is done so we can better map our internal logging data structures
+        # into values universally expected by OpenTelemetry backends,
+        # namely trace_id and span_id.
         self.trace_id_key: str = kwargs.get(OTLP_TRACE_ID_KEY, None)
         self.span_id_key: str = kwargs.get(OTLP_SPAN_ID_KEY, None)
 
@@ -77,25 +84,40 @@ class OTLPLoggingHandler(logging.Handler):
                             certificate_file=self.certificate_file)
 
     def emit(self, record: logging.LogRecord):
+        """
+        Do whatever it takes to actually log the specified logging record
 
+        :param record: The LogRecord from the Python logging infrastructure
+                       to handle
+        """
         if self._already_called:
             return
         self._already_called = True
 
+        # Format the LogRecord per the pre-configured python logging.Formatter
+        # With this, we get a string.
         # Try using our basic formatting.
         try:
             formatted = self.format(record)
         except ValueError:
             # That didn't work. Now try using something stock
             formatted = self._backup_formatter.format(record)
+        # Check to see if we have a structured log message already
+        try:
+            structured_log = json.loads(formatted)
+        except json.decoder.JSONDecodeError:
+            # Just emit the string with a standard message key
+            structured_log = {
+                "message": formatted
+            }
 
         # Try to extract LogRecord elements that will work
-        # as our "trace_id" and "span_id" keys:
+        # as our "trace_id" and "span_id" keys in output LogRecord:
         trace_id_val = self._get_substitute_key(self.trace_id_key, 0, record)
         span_id_val = self._get_substitute_key(self.span_id_key, 0, record)
 
         try:
-            lrec = LogRecord(body=formatted,
+            lrec = LogRecord(body=structured_log,
                              span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
                              severity_number=SeverityNumber.UNSPECIFIED,
                              resource=_DEFAULT_RESOURCE)
@@ -110,6 +132,12 @@ class OTLPLoggingHandler(logging.Handler):
             self._already_called = False
 
     def _get_substitute_key(self, key: str, default_value: int, record: logging.LogRecord) -> int:
+        """
+        Interpreting "record" as a Python dictionary,
+        extract value mapped to "key" in this dictionary.
+        We expect value to be convertable to integer,
+        any failure results in "default_value" being returned.
+        """
         if key is None:
             return default_value
         subst_value = record.__dict__.get(key, None)
