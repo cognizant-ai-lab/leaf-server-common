@@ -102,7 +102,7 @@ class ServiceLogRecord():
         """
         :return: The dictionary previously passed into set_up_record_factory()
         """
-        # pylint: disable=global-statement
+        # pylint: disable=global-statement,global-variable-not-assigned
         global _DEFAULT_EXTRA_LOGGING_FIELDS_DICT
         default_extra_logging_fields = copy.copy(_DEFAULT_EXTRA_LOGGING_FIELDS_DICT)
         return default_extra_logging_fields

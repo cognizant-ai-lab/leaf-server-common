@@ -10,7 +10,6 @@
 #
 # END COPYRIGHT
 
-import copy
 from threading import current_thread
 from typing import Any
 from typing import Dict
@@ -48,7 +47,7 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
     if metadata_dict is not None:
 
         for key in extra:
-            if key == "source" or key == "thread_name":
+            if key in ("source", "thread_name"):
                 # Pass these up. They should not be coming from
                 # any metadata dictionary in the request
                 continue
@@ -74,18 +73,19 @@ def setup_logging(server_name_for_logs: str,
     """
     Setup logging to be used by ServerLifeTime
     """
+    default_extra_logging_fields = {
+        "source": server_name_for_logs,
+        "thread_name": "Unknown",
+        "request_id": "None",
+        "user_id": "None",
+        "group_id": "None",
+        "run_id": "None",
+        "experiment_id": "None"
+    }
 
     extras = extra_logging_fields_defaults
     if extras is None:
-        extras = default_extra_logging_fields = {
-            "source": server_name_for_logs,
-            "thread_name": "Unknown",
-            "request_id": "None",
-            "user_id": "None",
-            "group_id": "None",
-            "run_id": "None",
-            "experiment_id": "None"
-        }
+        extras = default_extra_logging_fields
 
     logging_setup = LoggingSetup(default_log_config_dir=default_log_dir,
                                  default_log_config_file="logging.json",
