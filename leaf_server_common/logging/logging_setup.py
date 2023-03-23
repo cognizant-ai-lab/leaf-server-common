@@ -12,7 +12,8 @@
 
 import copy
 from threading import current_thread
-from typing import Any, Dict
+from typing import Any
+from typing import Dict
 
 from leaf_common.logging.logging_setup \
     import LoggingSetup
@@ -33,7 +34,7 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
     """
 
     # Assumes ServiceLogRecord.set_up_record_factory() has already been called once
-    # what is returned is really a copy 
+    # what is returned is really a copy.
     extra = ServiceLogRecord.get_default_extra_logging_fields()
     if extra is None:
         extra = {}
@@ -66,19 +67,25 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
 
 
 def setup_logging(server_name_for_logs: str,
-                  default_log_dir, log_config_env, log_level_env):
+                  default_log_dir,
+                  log_config_env,
+                  log_level_env,
+                  extra_logging_fields_defaults: Dict[str, str] = None):
     """
     Setup logging to be used by ServerLifeTime
     """
-    default_extra_logging_fields = {
-        "source": server_name_for_logs,
-        "thread_name": "Unknown",
-        "request_id": "None",
-        "user_id": "None",
-        "group_id": "None",
-        "run_id": "None",
-        "experiment_id": "None"
-    }
+
+    extras = extra_logging_fields_defaults
+    if extras is None:
+        extras = default_extra_logging_fields = {
+            "source": server_name_for_logs,
+            "thread_name": "Unknown",
+            "request_id": "None",
+            "user_id": "None",
+            "group_id": "None",
+            "run_id": "None",
+            "experiment_id": "None"
+        }
 
     logging_setup = LoggingSetup(default_log_config_dir=default_log_dir,
                                  default_log_config_file="logging.json",
@@ -91,5 +98,5 @@ def setup_logging(server_name_for_logs: str,
     StructuredLogRecord.set_up_record_factory()
 
     # Enable thread-local information to go into log messages
-    ServiceLogRecord.set_up_record_factory(default_extra_logging_fields)
-    setup_extra_logging_fields(extra_logging_fields=default_extra_logging_fields)
+    ServiceLogRecord.set_up_record_factory(extras)
+    setup_extra_logging_fields(extra_logging_fields=extras)
