@@ -97,6 +97,16 @@ class ServiceLogRecord():
 
         logging.setLogRecordFactory(_service_log_record_factory)
 
+    @classmethod
+    def get_default_extra_logging_fields(cls):
+        """
+        :return: The dictionary previously passed into set_up_record_factory()
+        """
+        # pylint: disable=global-statement
+        global _DEFAULT_EXTRA_LOGGING_FIELDS_DICT
+        default_extra_logging_fields = copy.copy(_DEFAULT_EXTRA_LOGGING_FIELDS_DICT)
+        return default_extra_logging_fields
+
     def __init__(self, logging_fields_dict=None):
         """
         Constructor.

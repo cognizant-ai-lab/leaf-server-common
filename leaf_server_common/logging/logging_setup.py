@@ -32,33 +32,32 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
     :param extra_logging_fields: Additional fields dictionary. Default is None
     """
 
-    extra = copy.copy(extra_logging_fields) if extra_logging_fields else {}
+    # Assumes ServiceLogRecord.set_up_record_factory() has already been called once
+    # what is returned is really a copy 
+    extra = ServiceLogRecord.get_default_extra_logging_fields()
+    if extra is None:
+        extra = {}
+    if extra_logging_fields is not None:
+        extra.update(extra_logging_fields)
+
     extra["thread_name"] = current_thread().name
 
     # Get information from the GRPC client context that is to be
     # put into the logs.
     if metadata_dict is not None:
 
-        # Add fields from the GRPC Header metadata to the logging info
-        request_id = metadata_dict.get("request_id", None)
-        if request_id is not None:
-            extra["request_id"] = str(request_id)
+        for key in extra:
+            if key == "source" or key == "thread_name":
+                # Pass these up. They should not be coming from
+                # any metadata dictionary in the request
+                continue
 
-        user_id = metadata_dict.get("user_id", None)
-        if user_id is not None:
-            extra["user_id"] = str(user_id)
-
-        group_id = metadata_dict.get("group_id", None)
-        if group_id is not None:
-            extra["group_id"] = str(group_id)
-
-        experiment_id = metadata_dict.get("experiment_id", None)
-        if experiment_id is not None:
-            extra["experiment_id"] = str(experiment_id)
-
-        run_id = metadata_dict.get("run_id", None)
-        if run_id is not None:
-            extra["run_id"] = str(run_id)
+            # Override the defaults with what was in the metadata_dict
+            # Do not incorporate any fields that were not already
+            # in the accumulated extra dictionary.
+            value = metadata_dict.get(key, None)
+            if value is not None:
+                extra[key] = str(value)
 
     # Create the ServiceLogRecord thread-local context.
     # In doing so like this, we actually are setting up global variables.
