@@ -111,14 +111,13 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         except ValueError:
             # That didn't work. Now try using something stock
             formatted = self._backup_formatter.format(record)
-        # Check to see if we have a structured log message already
-        try:
-            structured_log = json.loads(formatted)
-        except json.decoder.JSONDecodeError:
-            # Just emit the string with a standard message key
-            structured_log = {
-                "message": formatted
-            }
+
+        # OTLP LoggingHandler only expects strings as "body" of LogRecord;
+        # so lets check that we have a string:
+        if formatted is None:
+            formatted = ""
+        if not isinstance(formatted, str):
+            formatted = "<message is NOT a string>"
 
         # Try to extract LogRecord elements that will work
         # as our "trace_id" and "span_id" keys in output LogRecord:
@@ -126,7 +125,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         span_id_val = self._get_substitute_key(self.span_id_key, 0, record)
 
         try:
-            lrec = LogRecord(body=structured_log,
+            lrec = LogRecord(body=formatted,
                              span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
                              severity_number=SeverityNumber.UNSPECIFIED,
                              resource=_DEFAULT_RESOURCE)
