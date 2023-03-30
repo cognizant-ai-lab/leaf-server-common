@@ -33,6 +33,14 @@ OTLP_ENDPOINT_KEY = "endpoint"
 # Otherwise it should be omitted.
 OTLP_CERTIFICATE_KEY = "certificate_file"
 
+# In logging setups where Open-telemetry logger will not work at all
+# (for example local setup or when open-telemetry collector
+# is not configured correctly),
+# we want to reduce amount of output dumping.
+# So this LoggerHandler will be disabled
+# after MAX_SEND_FAILED_COUNT of consecutive failed attempts to send log data.
+MAX_SEND_FAILED_COUNT: int = 32
+
 
 class OpenTelemetryLoggingHandler(logging.Handler):
     """
@@ -88,6 +96,9 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         self.trace_id_key: str = kwargs.get(OTLP_TRACE_ID_KEY, None)
         self.span_id_key: str = kwargs.get(OTLP_SPAN_ID_KEY, None)
 
+        # Number of consecutive failed attempts to send log out.
+        self.fail_count = 0
+
         try:
             self.exporter = \
                 OTLPLogExporter(endpoint=self.endpoint,
@@ -139,13 +150,29 @@ class OpenTelemetryLoggingHandler(logging.Handler):
                              resource=_DEFAULT_RESOURCE)
             ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
             self.exporter.export([ldata])
+            self.fail_count = 0
         # pylint: disable=broad-except
         except BaseException as exc:
             # We want to catch as much as possible here:
             # don't really care about failures in logging.
             print(f"FAILED to send OTLP log data: {exc}")
+            self.fail_count = self.fail_count+1
+            if self._too_many_fails():
+                print(f"Too many failed attempts to send log data: {self.fail_count}")
+                print(f"Giving up on this LoggingHandler")
         finally:
-            self._already_called = False
+            # If we have seen too many failures to send,
+            # that would disable our LoggerHandler -
+            # see the first check in method body.
+            self._already_called = self._too_many_fails()
+
+    def _too_many_fails(self) -> bool:
+        """
+        Return True, if we have seen too many consecutive
+        failed attempts to send out log data.
+        Return False otherwise.
+        """
+        return 0 < MAX_SEND_FAILED_COUNT < self.fail_count
 
     def _get_substitute_key(self, key: str, default_value: int, record: logging.LogRecord) -> int:
         """
