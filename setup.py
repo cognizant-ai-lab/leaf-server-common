@@ -9,7 +9,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-LIBRARY_VERSION = "0.0.4"
+LIBRARY_VERSION = "0.0.5"
 LEAF_COMMON_VERSION = "1.1.50"
 
 CURRENT_PYTHON = sys.version_info[:2]
@@ -54,7 +54,9 @@ setup(
         "grpcio-reflection==1.46.3",
         "grpcio-tools==1.46.3",
         "protobuf==3.19.5",
-        "libhoney==2.0.0"
+        "opentelemetry-api==1.15.0",
+        "opentelemetry-sdk==1.15.0",
+        "opentelemetry-exporter-otlp==1.15.0"
     ],
     description='Library for common service infrastructure for use by LEAF services',
     long_description=read('README.md'),
