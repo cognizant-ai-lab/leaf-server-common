@@ -88,9 +88,17 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         self.trace_id_key: str = kwargs.get(OTLP_TRACE_ID_KEY, None)
         self.span_id_key: str = kwargs.get(OTLP_SPAN_ID_KEY, None)
 
-        self.exporter = \
-            OTLPLogExporter(endpoint=self.endpoint,
-                            certificate_file=self.certificate_file)
+        try:
+            self.exporter = \
+                OTLPLogExporter(endpoint=self.endpoint,
+                                certificate_file=self.certificate_file)
+        except Exception as exc:
+            # If we fail to create OTLPLogExporter for any reason
+            # (for example we have no open-telemetry endpoint available)
+            # print a message once and disable this LogExporter
+            print(f"FAILED to create OTLPLogExporter: {exc}")
+            # That will make any "emit" calls a no-action
+            self._already_called = True
 
     def emit(self, record: logging.LogRecord):
         """
