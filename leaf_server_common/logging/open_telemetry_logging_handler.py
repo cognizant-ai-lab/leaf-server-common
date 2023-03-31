@@ -10,7 +10,6 @@
 #
 # END COPYRIGHT
 
-import json
 import logging
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -69,6 +68,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
     },
     """
 
+    # pylint: disable=too-many-instance-attribute
     def __init__(self, level=logging.NOTSET, **kwargs):
         super().__init__(level)
 
@@ -103,6 +103,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
             self.exporter = \
                 OTLPLogExporter(endpoint=self.endpoint,
                                 certificate_file=self.certificate_file)
+        # pylint: disable=broad-except
         except Exception as exc:
             # If we fail to create OTLPLogExporter for any reason
             # (for example we have no open-telemetry endpoint available)
@@ -159,7 +160,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
             self.fail_count = self.fail_count+1
             if self._too_many_fails():
                 print(f"Too many failed attempts to send log data: {self.fail_count}")
-                print(f"Giving up on this LoggingHandler")
+                print("Giving up on this LoggingHandler")
         finally:
             # If we have seen too many failures to send,
             # that would disable our LoggerHandler -
