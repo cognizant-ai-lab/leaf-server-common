@@ -68,7 +68,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
     },
     """
 
-    # pylint: disable=too-many-instance-attribute
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, level=logging.NOTSET, **kwargs):
         super().__init__(level)
 
