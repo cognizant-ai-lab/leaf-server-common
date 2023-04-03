@@ -76,6 +76,13 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         # debug=True
         self._already_called = False
 
+        # Logger to report problems with our LoggingHandler;
+        # that seems circular, because OpenTelemetryLoggingHandler itself
+        # is a run-time part of our loggers, but it works,
+        # if we call logger with self._already_called
+        # set to True.
+        self.logger = logging.getLogger(self.__class__.__name__)
+
         # In case log records don't have all the fields we need.
         # This happens in some print() statements during the early stages
         # of service setup.
@@ -105,12 +112,12 @@ class OpenTelemetryLoggingHandler(logging.Handler):
                                 certificate_file=self.certificate_file)
         # pylint: disable=broad-except
         except Exception as exc:
-            # If we fail to create OTLPLogExporter for any reason
-            # (for example we have no open-telemetry endpoint available)
-            # print a message once and disable this LogExporter
-            print(f"FAILED to create OTLPLogExporter: {exc}")
             # That will make any "emit" calls a no-action
             self._already_called = True
+            # If we fail to create OTLPLogExporter for any reason
+            # (for example we have no open-telemetry endpoint available)
+            # issue a message once and disable this LogExporter
+            self.logger.error(f"FAILED to create OTLPLogExporter: {exc}")
 
     def emit(self, record: logging.LogRecord):
         """
@@ -151,16 +158,19 @@ class OpenTelemetryLoggingHandler(logging.Handler):
                              resource=_DEFAULT_RESOURCE)
             ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
             self.exporter.export([ldata])
+            # If we send out log message successfully, reset our "fail" counter,
+            # so we would only react to MAX_SEND_FAILED_COUNT
+            # consecutive failed attempts to send.
             self.fail_count = 0
         # pylint: disable=broad-except
         except BaseException as exc:
             # We want to catch as much as possible here:
             # don't really care about failures in logging.
-            print(f"FAILED to send OTLP log data: {exc}")
+            self.logger.info(f"FAILED to send OTLP log data: {exc}")
             self.fail_count = self.fail_count+1
             if self._too_many_fails():
-                print(f"Too many failed attempts to send log data: {self.fail_count}")
-                print("Giving up on this LoggingHandler")
+                self.logger.error(f"Too many failed attempts to send log data: {self.fail_count}")
+                self.logger.error("Giving up on this LoggingHandler")
         finally:
             # If we have seen too many failures to send,
             # that would disable our LoggerHandler -
