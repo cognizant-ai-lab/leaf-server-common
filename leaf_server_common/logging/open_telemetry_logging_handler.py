@@ -117,7 +117,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
             # If we fail to create OTLPLogExporter for any reason
             # (for example we have no open-telemetry endpoint available)
             # issue a message once and disable this LogExporter
-            self.logger.error(f"FAILED to create OTLPLogExporter: {exc}")
+            self.logger.error("FAILED to create OTLPLogExporter: %s", exc)
 
     def emit(self, record: logging.LogRecord):
         """
@@ -166,10 +166,10 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         except BaseException as exc:
             # We want to catch as much as possible here:
             # don't really care about failures in logging.
-            self.logger.info(f"FAILED to send OTLP log data: {exc}")
+            self.logger.info("FAILED to send OTLP log data: %s", exc)
             self.fail_count = self.fail_count+1
             if self._too_many_fails():
-                self.logger.error(f"Too many failed attempts to send log data: {self.fail_count}")
+                self.logger.error("Too many failed attempts to send log data: %d", self.fail_count)
                 self.logger.error("Giving up on this LoggingHandler")
         finally:
             # If we have seen too many failures to send,
