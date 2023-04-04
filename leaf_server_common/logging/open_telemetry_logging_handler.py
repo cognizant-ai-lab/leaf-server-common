@@ -10,7 +10,6 @@
 #
 # END COPYRIGHT
 
-import json
 import logging
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -32,6 +31,14 @@ OTLP_ENDPOINT_KEY = "endpoint"
 # if our connection to OpenTelemetry collector is TLS encrypted.
 # Otherwise it should be omitted.
 OTLP_CERTIFICATE_KEY = "certificate_file"
+
+# In logging setups where Open-telemetry logger will not work at all
+# (for example local setup or when open-telemetry collector
+# is not configured correctly),
+# we want to reduce amount of output dumping.
+# So this LoggerHandler will be disabled
+# after MAX_SEND_FAILED_COUNT of consecutive failed attempts to send log data.
+MAX_SEND_FAILED_COUNT: int = 32
 
 
 class OpenTelemetryLoggingHandler(logging.Handler):
@@ -61,12 +68,20 @@ class OpenTelemetryLoggingHandler(logging.Handler):
     },
     """
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, level=logging.NOTSET, **kwargs):
         super().__init__(level)
 
         # This variable prevents infinite recursion when init gets passed
         # debug=True
         self._already_called = False
+
+        # Logger to report problems with our LoggingHandler;
+        # that seems circular, because OpenTelemetryLoggingHandler itself
+        # is a run-time part of our loggers, but it works,
+        # if we call logger with self._already_called
+        # set to True.
+        self.logger = logging.getLogger(self.__class__.__name__)
 
         # In case log records don't have all the fields we need.
         # This happens in some print() statements during the early stages
@@ -88,9 +103,21 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         self.trace_id_key: str = kwargs.get(OTLP_TRACE_ID_KEY, None)
         self.span_id_key: str = kwargs.get(OTLP_SPAN_ID_KEY, None)
 
-        self.exporter = \
-            OTLPLogExporter(endpoint=self.endpoint,
-                            certificate_file=self.certificate_file)
+        # Number of consecutive failed attempts to send log out.
+        self.fail_count = 0
+
+        try:
+            self.exporter = \
+                OTLPLogExporter(endpoint=self.endpoint,
+                                certificate_file=self.certificate_file)
+        # pylint: disable=broad-except
+        except Exception as exc:
+            # That will make any "emit" calls a no-action
+            self._already_called = True
+            # If we fail to create OTLPLogExporter for any reason
+            # (for example we have no open-telemetry endpoint available)
+            # issue a message once and disable this LogExporter
+            self.logger.error("FAILED to create OTLPLogExporter: %s", exc)
 
     def emit(self, record: logging.LogRecord):
         """
@@ -111,14 +138,13 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         except ValueError:
             # That didn't work. Now try using something stock
             formatted = self._backup_formatter.format(record)
-        # Check to see if we have a structured log message already
-        try:
-            structured_log = json.loads(formatted)
-        except json.decoder.JSONDecodeError:
-            # Just emit the string with a standard message key
-            structured_log = {
-                "message": formatted
-            }
+
+        # OTLP LoggingHandler only expects strings as "body" of LogRecord;
+        # so lets check that we have a string:
+        if formatted is None:
+            formatted = ""
+        if not isinstance(formatted, str):
+            formatted = "<message is NOT a string>"
 
         # Try to extract LogRecord elements that will work
         # as our "trace_id" and "span_id" keys in output LogRecord:
@@ -126,19 +152,38 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         span_id_val = self._get_substitute_key(self.span_id_key, 0, record)
 
         try:
-            lrec = LogRecord(body=structured_log,
+            lrec = LogRecord(body=formatted,
                              span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
                              severity_number=SeverityNumber.UNSPECIFIED,
                              resource=_DEFAULT_RESOURCE)
             ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
             self.exporter.export([ldata])
+            # If we send out log message successfully, reset our "fail" counter,
+            # so we would only react to MAX_SEND_FAILED_COUNT
+            # consecutive failed attempts to send.
+            self.fail_count = 0
         # pylint: disable=broad-except
         except BaseException as exc:
             # We want to catch as much as possible here:
             # don't really care about failures in logging.
-            print(f"FAILED to send OTLP log data: {exc}")
+            self.logger.info("FAILED to send OTLP log data: %s", exc)
+            self.fail_count = self.fail_count+1
+            if self._too_many_fails():
+                self.logger.error("Too many failed attempts to send log data: %d", self.fail_count)
+                self.logger.error("Giving up on this LoggingHandler")
         finally:
-            self._already_called = False
+            # If we have seen too many failures to send,
+            # that would disable our LoggerHandler -
+            # see the first check in method body.
+            self._already_called = self._too_many_fails()
+
+    def _too_many_fails(self) -> bool:
+        """
+        Return True, if we have seen too many consecutive
+        failed attempts to send out log data.
+        Return False otherwise.
+        """
+        return 0 < MAX_SEND_FAILED_COUNT < self.fail_count
 
     def _get_substitute_key(self, key: str, default_value: int, record: logging.LogRecord) -> int:
         """
