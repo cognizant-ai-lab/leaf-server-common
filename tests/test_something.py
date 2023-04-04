@@ -10,5 +10,5 @@ class TestSomething(TestCase):
         """
         Tests that the class can be instantiated
         """
-
+        # pylint: disable=redundant-unittest-assert
         self.assertTrue(True)
