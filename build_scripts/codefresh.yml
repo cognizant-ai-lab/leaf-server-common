@@ -138,7 +138,7 @@ steps:
                 # Use the image created by the repo_build step above
                 # See: https://codefresh.io/docs/docs/codefresh-yaml/variables/
                 image: ${{repo_build}}
-                description: Run unit tests (nosetests)
+                description: Run unit tests (pytests)
                 # Specifically run in the APP_SOURCE directory inside the container,
                 # *not* in the CF_VOLUME as we had erroneously done before.
                 working_directory: ${{APP_SOURCE}}
@@ -146,9 +146,7 @@ steps:
                 commands:
                     - pip3 freeze
                     - >-
-                        nosetests -v --nocapture --with-ignore-docstrings
-                        --with-timer --timer-top-n 10
-                        --timer-ok 30s --timer-warning 60s
+                        pytest --verbose -m "not integration" --timer-top-n 10
 
     clean_up:
         description: "Clean up after ourselves"
