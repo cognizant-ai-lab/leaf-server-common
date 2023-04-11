@@ -9,11 +9,11 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-LIBRARY_VERSION = "0.0.5"
-LEAF_COMMON_VERSION = "1.1.50"
+LIBRARY_VERSION = "0.1.0"
+LEAF_COMMON_VERSION = "1.2.0"
 
 CURRENT_PYTHON = sys.version_info[:2]
-REQUIRED_PYTHON = (3, 8)
+REQUIRED_PYTHON = (3, 10)
 
 if CURRENT_PYTHON < REQUIRED_PYTHON:
     sys.stderr.write(f"""
@@ -49,14 +49,14 @@ setup(
         # At least acknowledge that we have a source-available dependency
 
         # f"leaf-common @ git+https://github.com/leaf-ai/leaf-common.git@{LEAF_COMMON_VERSION}#egg=leaf-common",
-        "grpcio==1.46.3",
-        "grpcio-health-checking==1.46.3",
-        "grpcio-reflection==1.46.3",
-        "grpcio-tools==1.46.3",
-        "protobuf==3.19.5",
-        "opentelemetry-api==1.15.0",
-        "opentelemetry-sdk==1.15.0",
-        "opentelemetry-exporter-otlp==1.15.0"
+        "grpcio==1.48.2",
+        "grpcio-health-checking==1.48.2",
+        "grpcio-reflection==1.48.2",
+        "grpcio-tools==1.48.2",
+        "protobuf==3.20.3",
+        "opentelemetry-api==1.17.0",
+        "opentelemetry-sdk==1.17.0",
+        "opentelemetry-exporter-otlp==1.17.0"
     ],
     description='Library for common service infrastructure for use by LEAF services',
     long_description=read('README.md'),
