@@ -6,7 +6,7 @@ pytest==7.2.2
 pytest-timer==0.0.11
 
 # Code quality
-flake8==6.0.1
+flake8==6.0.0
 pylint==2.17.2
 
 # Special pylint extensions
