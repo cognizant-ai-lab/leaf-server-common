@@ -87,6 +87,7 @@ steps:
 
     run_all_tests:
         type: parallel
+        fail_fast: false
         steps:
             run_pylint:
                 title: Run pylint
@@ -170,5 +171,5 @@ steps:
                         steps.run_pylint.result == "failure" ||
                         steps.run_flake8.result == "failure" ||
                         steps.run_shellcheck.result == "failure" ||
-                        steps.run_unit_tests == "failure" ||
-                        steps.run_all_tests == "failure"
+                        steps.run_unit_tests.result == "failure" ||
+                        steps.run_all_tests.result == "failure"
