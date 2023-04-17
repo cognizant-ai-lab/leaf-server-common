@@ -9,7 +9,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-LIBRARY_VERSION = "0.1.0"
+LIBRARY_VERSION = "0.1.1"
 LEAF_COMMON_VERSION = "1.2.0"
 
 CURRENT_PYTHON = sys.version_info[:2]
@@ -53,7 +53,7 @@ setup(
         "grpcio-health-checking==1.48.2",
         "grpcio-reflection==1.48.2",
         "grpcio-tools==1.48.2",
-        "protobuf==3.20.3",
+        "protobuf==3.19.6",
         "opentelemetry-api==1.17.0",
         "opentelemetry-sdk==1.17.0",
         "opentelemetry-exporter-otlp==1.17.0"
