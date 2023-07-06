@@ -49,10 +49,10 @@ setup(
         # At least acknowledge that we have a source-available dependency
 
         # f"leaf-common @ git+https://github.com/leaf-ai/leaf-common.git@{LEAF_COMMON_VERSION}#egg=leaf-common",
-        "grpcio==1.48.2",
-        "grpcio-health-checking==1.48.2",
-        "grpcio-reflection==1.48.2",
-        "grpcio-tools==1.48.2",
+        "grpcio>=1.53.0",
+        "grpcio-health-checking>=1.53.0",
+        "grpcio-reflection>=1.53.0",
+        "grpcio-tools>=1.53.0",
         "protobuf==3.19.6",
         "opentelemetry-api==1.17.0",
         "opentelemetry-sdk==1.17.0",
