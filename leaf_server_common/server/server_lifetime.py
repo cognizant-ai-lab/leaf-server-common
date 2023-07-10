@@ -145,7 +145,7 @@ class ServerLifetime(RequestLogger):
         self.health = health.HealthServicer(
                         experimental_non_blocking=True,
                         experimental_thread_pool=health_thread_pool)
-        # protobuf: disable=no-member
+        # pylint: disable=no-member
         self.health.set(self.server_name,
                         health_pb2.HealthCheckResponse.ServingStatus.NOT_SERVING)
 
