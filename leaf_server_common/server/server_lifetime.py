@@ -145,6 +145,7 @@ class ServerLifetime(RequestLogger):
         self.health = health.HealthServicer(
                         experimental_non_blocking=True,
                         experimental_thread_pool=health_thread_pool)
+        # protobuf: disable=no-member
         self.health.set(self.server_name,
                         health_pb2.HealthCheckResponse.ServingStatus.NOT_SERVING)
 
@@ -302,7 +303,7 @@ class ServerLifetime(RequestLogger):
         # Turn down the service in an orderly fashion so that the mesh can
         # turn up another replica if it is told too with in the policies cfg
         # pylint-protobuf cannot find enums defined within scope of a message
-        # pylint: disable=protobuf-undefined-attribute
+        # pylint: disable=protobuf-undefined-attribute,no-member
         self.health.set(self.server_name,
                         health_pb2.HealthCheckResponse.ServingStatus.NOT_SERVING)
         self.health.enter_graceful_shutdown()
@@ -354,7 +355,7 @@ class ServerLifetime(RequestLogger):
 
         # Activate the instance as healthy
         # pylint-protobuf cannot find enums defined within scope of a message
-        # pylint: disable=protobuf-undefined-attribute
+        # pylint: disable=protobuf-undefined-attribute,no-member
         self.health.set(self.server_name,
                         health_pb2.HealthCheckResponse.ServingStatus.SERVING)
         self.logger.info("%s started.", str(self.server_name_for_logs))
