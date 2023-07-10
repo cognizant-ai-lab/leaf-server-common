@@ -8,7 +8,7 @@ DEPENDENCY_DIRS=""
 IGNORE="${DEPENDENCY_DIRS} build_scripts"
 
 dirs=$1
-if [ "x${dirs}" == "x" ]
+if [ "${dirs}" == "" ]
 then
     dirs=${UP_TO_SNUFF_DIRS}
 fi
@@ -37,7 +37,7 @@ do
     done
 
     # If we do not need to ignore...
-    if [ "x" == "x${ignore_this}" ]
+    if [ "" == "${ignore_this}" ]
     then
         use_dirs="${use_dirs} ${dir}"
     fi
