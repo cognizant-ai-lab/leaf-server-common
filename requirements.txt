@@ -14,13 +14,13 @@ git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.2.0
 # Other dependencies
 
 # These are needed for grpc integration
-grpcio==1.53.0
-grpcio-health-checking==1.53.0
-grpcio-reflection==1.53.0
-grpcio-tools==1.53.0
+grpcio==1.53.1
+grpcio-health-checking==1.53.1
+grpcio-reflection==1.53.1
+grpcio-tools==1.53.1
 
-# Pinning to older version of protobuf required for tensorflow==2.11.1
-protobuf==3.19.6
+# Pinning to older version of protobuf required for tensorflow==2.12.1
+protobuf==4.23.3
 
 # Open-telemetry logging
 opentelemetry-api==1.17.0
