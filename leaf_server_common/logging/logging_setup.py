@@ -23,7 +23,7 @@ from leaf_server_common.logging.structured_log_record \
 
 
 def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
-                               extra_logging_fields=None):
+                               extra_logging_fields: Dict[str, str] = None):
     """
     Sets up extra thread-specific fields to be logged with each
     log message.

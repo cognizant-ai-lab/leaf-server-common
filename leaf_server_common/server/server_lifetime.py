@@ -9,6 +9,9 @@
 # leaf-server-common SDK Software in commercial settings.
 #
 # END COPYRIGHT
+
+from typing import Dict
+
 import random
 import time
 
@@ -181,7 +184,8 @@ class ServerLifetime(RequestLogger):
         # Finally stop the service
         self.server.stop(None)
 
-    def start_request(self, caller, requestor_id, context):
+    def start_request(self, caller, requestor_id, context,
+                      service_logging_dict: Dict[str, str] = None):
         """
         Called by client services to mark the beginning of a request
         inside their request methods.
@@ -190,6 +194,12 @@ class ServerLifetime(RequestLogger):
         :param requestor_id: A String representing other information about
                 the requestor which will be logged in a uniform fashion.
         :param context: a grpc.ServicerContext
+                from which structured logging fields can be derived from
+                request metadata
+        :param service_logging_dict: An optional service-specific dictionary
+                from which structured logging fields can be derived from
+                request-specific fields. When included, similarly named keys here
+                will be overriden by those from the context above.
         :return: The RequestLoggerAdapter for the request
         """
 
@@ -198,7 +208,7 @@ class ServerLifetime(RequestLogger):
         if context is not None:
             metadata = context.invocation_metadata()
             metadata_dict = GrpcMetadataUtil.to_dict(metadata)
-        setup_extra_logging_fields(metadata_dict)
+        setup_extra_logging_fields(metadata_dict, service_logging_dict)
         request_log = RequestLoggerAdapter(self.logger, None)
 
         # Log that the request was received by the caller

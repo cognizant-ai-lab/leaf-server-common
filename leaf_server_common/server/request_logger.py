@@ -10,13 +10,17 @@
 #
 # END COPYRIGHT
 
+from typing import Dict
+
+
 class RequestLogger():
     """
     An interface defining an API for services to call for logging
     the beginning and end of servicing their requests.
     """
 
-    def start_request(self, caller, requestor_id, context):
+    def start_request(self, caller, requestor_id, context,
+                      service_logging_dict: Dict[str, str] = None):
         """
         Called by services to mark the beginning of a request
         inside their request methods.
@@ -25,6 +29,12 @@ class RequestLogger():
         :param requestor_id: A String representing other information about
                 the requestor which will be logged in a uniform fashion.
         :param context: a grpc.ServicerContext
+                from which structured logging fields can be derived from
+                request metadata
+        :param service_logging_dict: An optional service-specific dictionary
+                from which structured logging fields can be derived from
+                request-specific fields. When included, similarly named keys here
+                will be overriden by those from the context above.
         :return: The RequestLoggerAdapter to be used throughout the
                 processing of the request
         """

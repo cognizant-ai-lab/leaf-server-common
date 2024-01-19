@@ -9,7 +9,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-LIBRARY_VERSION = "0.1.3"
+LIBRARY_VERSION = "0.1.4"
 LEAF_COMMON_VERSION = "1.2.1"
 
 CURRENT_PYTHON = sys.version_info[:2]
