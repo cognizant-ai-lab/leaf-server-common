@@ -7,7 +7,7 @@ FROM python:3.10-slim
 LABEL maintainer=donn.goodhew@cognizant.com
 ENV LANG C.UTF-8
 ENV PYTHON_VERSION 3.10
-ENV PIP3_VERSION 23.3.1
+ENV PIP3_VERSION 24.0
 ENV DEBIAN_FRONTEND noninteractive
 
 # Debian basics
