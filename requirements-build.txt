@@ -11,3 +11,5 @@ pylint==3.1.0
 
 # Special pylint extensions
 pylint-protobuf==0.22.0
+
+setuptools>=74.1.2
