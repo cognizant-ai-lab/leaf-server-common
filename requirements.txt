@@ -9,7 +9,7 @@
 
 # Not yet
 # Do the source-available stuff first to fast-fail if credentials are not right
-git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.2.7
+git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.2.8
 
 # Other dependencies
 
