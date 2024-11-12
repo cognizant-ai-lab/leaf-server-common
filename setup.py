@@ -9,8 +9,8 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-LIBRARY_VERSION = "0.1.8"
-LEAF_COMMON_VERSION = "1.2.8"
+LIBRARY_VERSION = "0.1.9"
+LEAF_COMMON_VERSION = "1.2.10"
 
 CURRENT_PYTHON = sys.version_info[:2]
 REQUIRED_PYTHON = (3, 10)
