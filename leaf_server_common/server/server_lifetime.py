@@ -47,7 +47,7 @@ class ServerLifetime(RequestLogger):
     # Tied for Public Enemy #3 for too-many-arguments
     # pylint: disable=too-many-arguments
     # Tied for Public Enemy #2 for too-many-instance-attributes
-    # pylint: disable=too-many-instance-attributes,too-many-locals
+    # pylint: disable=too-many-instance-attributes,too-many-locals,too-many-positional-arguments
     def __init__(self, server_name, server_name_for_logs, port,
                  logger,
                  request_limit=-1, max_workers=10, max_concurrent_rpcs=None,

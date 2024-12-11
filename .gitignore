@@ -1,13 +1,20 @@
-# virtualenv folders
+# PyCharm project files
+.idea/
+
+# ipython notebook checkpoints
+.ipynb_checkpoints/
+
+# virtualenv folder
 venv/
 venv3/
 
 # Python byte code
 *.pyc
-unileaf_util.egg-info/
 
-# PyCharm env
-.idea/
+# build files
+dist/
+build/
+*.egg-info/
 
 # Vim editor restore files
 *.swp

@@ -22,7 +22,7 @@ class ServiceInfo():
     A class which populates a dictionary with service information.
     """
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, name=None, start_time_since_epoch=None, status="OK",
                  persist_path=None, persist_mechanism=None):
         """
