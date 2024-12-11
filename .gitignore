@@ -18,3 +18,9 @@ build/
 
 # Vim editor restore files
 *.swp
+
+# Documentation created by mkdocs which may harbor security vulnerabilities
+site/
+
+# Resources used by Dockerfile
+leaf-common/
