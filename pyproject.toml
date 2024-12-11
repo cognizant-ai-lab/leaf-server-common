@@ -10,7 +10,7 @@ name = "leaf-server-common"
 authors = [
     { name="Dan Fink", email="Daniel.Fink@cognizant.com" }
 ]
-description = "NeuroAI data-driven System for multi-Agent Networks"
+description = "Library for common service infrastructure for use by LEAF services"
 keywords = ["service", "infrastructure", "grpc"]
 readme = "README.md"
 license = {file = "LICENSE.txt"}
@@ -57,5 +57,5 @@ exclude = ["tests*", "build_scripts*"]
 fallback_version = "0.0.1"
 
 [project.urls]
-Homepage = "https://github.com/leaf-ai/neuro-san"
-Repository = "https://github.com/leaf-ai/neuro-san"
+Homepage = "https://github.com/leaf-ai/leaf-server-common"
+Repository = "https://github.com/leaf-ai/leaf-server-common"
