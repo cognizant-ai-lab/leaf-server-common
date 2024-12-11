@@ -1,29 +1,23 @@
 
 # These requirements are for the Python that is run in the
-# backend/job_submission container.  As of 10/13/2021, this is the
-# only python container we need to deploy, so these requirements are
-# at the top-level.
+# build container.
 #
 # Requirements for tests, code style and other build stuff reside in
 # requirements-build.txt
 
-# Not yet
-# Do the source-available stuff first to fast-fail if credentials are not right
-git+https://${LEAF_SOURCE_CREDENTIALS}@github.com/leaf-ai/leaf-common.git@1.2.12
-
 # Other dependencies
 
 # These are needed for grpc integration
-grpcio==1.62.0
-grpcio-health-checking==1.62.0
-grpcio-reflection==1.62.0
-grpcio-tools==1.62.0
+grpcio>=1.62.0
+grpcio-health-checking>=1.62.0
+grpcio-reflection>=1.62.0
+grpcio-tools>=1.62.0
 
 # Pinning to older version of protobuf required for tensorflow==2.14.1
-protobuf==4.25.3
+protobuf>=4.25.3
 
 # Open-telemetry logging
-opentelemetry-api==1.23.0
-opentelemetry-sdk==1.23.0
-opentelemetry-exporter-otlp==1.23.0
+opentelemetry-api>=1.23.0
+opentelemetry-sdk>=1.23.0
+opentelemetry-exporter-otlp>=1.23.0
 

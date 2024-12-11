@@ -8,6 +8,16 @@ steps:
         repo: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
         git: github
         revision: "${{CF_REVISION}}"
+        depth: 0  # Fetch full history, not a shallow clone
+
+    determine_latest_git_tag:
+        title: "Determine Latest Git tag"
+        description: "Find the current git tag for use later in pipeline"
+        type: "freestyle"
+        image: alpine/git:v2.30.0
+        working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
+        commands:
+          - cf_export SETUPTOOLS_SCM_PRETEND_VERSION=`git tag --sort=-v:refname | head -n 1`
 
     prepare_for_build:
         description: "Do any common preparation for tests"
@@ -27,6 +37,10 @@ steps:
 
             # cf_export these variables so these vars can be used in later build steps
             - cf_export TEMP_DIR_OUTSIDE_CONTAINER APP_HOME APP_SOURCE
+
+            # set the wheel package name which is the
+            # the repo name, but with underscores instead of dashes
+            - cf_export PACKAGE_NAME=`echo ${{CF_REPO_NAME}} | sed s/-/_/`
 
     create-temp-git-creds-from-vault:
         title: "Get ephemeral GitHub creds"
@@ -48,7 +62,7 @@ steps:
             # Specifically use the temp directory outside the container we want to build
             # so as not to accidentally copy sensitive credentials inside of it.
             - export WITH_CREDS_REQUIREMENTS=${{TEMP_DIR_OUTSIDE_CONTAINER}}/with_creds_requirements.txt
-            - cp requirements.txt ${WITH_CREDS_REQUIREMENTS}
+            - cp requirements-private.txt ${WITH_CREDS_REQUIREMENTS}
             - cf_export WITH_CREDS_REQUIREMENTS
 
             # Login into Vault only once
@@ -63,6 +77,13 @@ steps:
                 sed -i "s/\${LEAF_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_SOURCE_CREDENTIALS}/g"
                 ${WITH_CREDS_REQUIREMENTS}
 
+            # Get the ephemeral token for private repos
+            - EPHEMERAL_TOKEN=$(vault read -address=${{VAULT}} -field=token /github-private-secrets/token/repo-read)
+            - EPHEMERAL_LEAF_PRIVATE_SOURCE_CREDENTIALS="x-access-token:${EPHEMERAL_TOKEN}"
+            - >-
+                sed -i "s/\${LEAF_PRIVATE_SOURCE_CREDENTIALS}/${EPHEMERAL_LEAF_PRIVATE_SOURCE_CREDENTIALS}/g"
+                ${WITH_CREDS_REQUIREMENTS}
+
     repo_build:
         title: "Building Docker image for ${{CF_REPO_NAME}}"
         type: "build"
@@ -70,6 +91,7 @@ steps:
         tag: ${{CF_BRANCH_TAG_NORMALIZED}}-${{CF_SHORT_REVISION}}
         working_directory: ${{CF_VOLUME_PATH}}/${{CF_REPO_NAME}}
         dockerfile: "build_scripts/Dockerfile"
+        disable_push: true
         buildkit: true
         # Docker BuildKit has different output. This progress plain allows
         # us to see the "old" style output which is useful.
@@ -146,8 +168,13 @@ steps:
                 fail_fast: false
                 commands:
                     - pip3 freeze
-                    - >-
-                        pytest --verbose -m "not integration" --timer-top-n 10
+                    - pytest --version
+                    - >
+                      pytest
+                      --verbose
+                      -m "not integration"
+                      --timer-top-n 10
+                      --cov=neuro_san
 
     clean_up:
         description: "Clean up after ourselves"
@@ -157,6 +184,7 @@ steps:
         commands:
             # Clean up anything senstive we do not want to leak between builds
             - rm -rf ${{TEMP_DIR_OUTSIDE_CONTAINER}}
+            - rm -rf ${{CF_VOLUME_PATH}}/${{CF_BUILD_ID}}
 
     all_test_status:
         title: Check For Failed Tests
@@ -173,3 +201,30 @@ steps:
                         steps.run_shellcheck.result == "failure" ||
                         steps.run_unit_tests.result == "failure" ||
                         steps.run_all_tests.result == "failure"
+
+    build_wheel:
+        title: Build wheel file
+        image: ${{repo_build}}
+        shell: bash
+        description: Build wheel file for distribution
+        working_directory: ${{APP_SOURCE}}
+        commands:
+            - python -m build --wheel
+            - mkdir -p ${{CF_VOLUME_PATH}}/${{CF_BUILD_ID}}
+            - cd dist && mv ${PACKAGE_NAME}*.whl ${{CF_VOLUME_PATH}}/${{CF_BUILD_ID}}
+
+    upload-to-S3:
+        title: Upload Wheel to S3
+        type: aws-s3
+        arguments:
+            REGION: us-west-2
+            BUCKET: ${{UNILEAF_WHEEL_BUCKET}}
+            S3_INTEGRATION: amazon
+            S3_PREFIX: ${{PACKAGE_NAME}}/
+            SOURCE: ${{CF_VOLUME_PATH}}/${{CF_BUILD_ID}}
+        when:
+            condition:
+                all:
+                # This is idiomatic Codefresh for detecting if ${{CF_RELEASE_TAG}} has a value. We only want to deploy
+                # on Github release triggers, and this variable gets populated only for Github releases.
+                    deploy_tagged_builds_only: 'includes("${{CF_RELEASE_TAG}}", "{{CF_RELEASE_TAG}}") == false'
