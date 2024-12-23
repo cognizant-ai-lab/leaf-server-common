@@ -54,6 +54,12 @@ class AsyncioExecutor(Executor):
         # Use the global
         self._background_tasks: Dict[Future, Dict[str, Any]] = BACKGROUND_TASKS
 
+    def get_event_loop(self) -> AbstractEventLoop:
+        """
+        :return: The AbstractEventLoop associated with this instance
+        """
+        return self._loop
+
     def start(self):
         """
         Starts the background thread.
@@ -113,7 +119,8 @@ class AsyncioExecutor(Executor):
 
         :param submitter_id: A string id denoting who is doing the submitting.
         :param function: The function handle to run
-        :param /: I have no idea what this means, but it's necessary
+        :param /: Positional or keyword arguments.
+            See https://realpython.com/python-asterisk-and-slash-special-parameters/
         :param args: args for the function
         :param kwargs: keyword args for the function
         :return: An asyncio.Future that corresponds to the submitted task
