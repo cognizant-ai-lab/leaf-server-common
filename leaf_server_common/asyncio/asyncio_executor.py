@@ -141,6 +141,15 @@ class AsyncioExecutor(Executor):
             func = functools.partial(function, *args, **kwargs)
             future = self._loop.run_in_executor(None, func)
 
+        self.track_future(future, submitter_id, function)
+
+    def track_future(self, future: Future, submitter_id: str, function):
+        """
+        :param future: The Future to track
+        :param submitter_id: A string id denoting who is doing the submitting.
+        :param function: The function handle to be run in the future
+        """
+
         # Weak references in the asyncio system can cause tasks to disappear
         # before they execute.  Hold a reference in a global as per
         # https://docs.python.org/3/library/asyncio-task.html#creating-tasks
