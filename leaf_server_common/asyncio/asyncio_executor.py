@@ -163,6 +163,11 @@ class AsyncioExecutor(Executor):
 
         if future.done():
             try:
+                # First see if there was any exception
+                exception = future.exception()
+                if exception is not None:
+                    raise exception
+
                 result = future.result()
                 _ = result
             except TimeoutError:
