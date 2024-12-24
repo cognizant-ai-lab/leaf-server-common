@@ -6,6 +6,7 @@ from typing import Type
 
 from asyncio import Future
 from time import sleep
+from time import time
 
 from leaf_server_common.asyncio.asyncio_executor import AsyncioExecutor
 
@@ -19,7 +20,8 @@ class AsyncToSyncGenerator:
     def __init__(self, asyncio_executor: AsyncioExecutor,
                  submitter_id: str = None,
                  generated_type: Type[Any] = Any,
-                 default_result: Any = None,
+                 keep_alive_result: Any = None,
+                 keep_alive_timeout_seconds: float = 0.0,
                  poll_seconds: float = 0.1):
         """
         Constructor
@@ -31,14 +33,20 @@ class AsyncToSyncGenerator:
         :param generated_type: The type that is returned from the AsyncGenerator.
                 Note: Subscripted generics like Dict[str, Any] cannot be used here.
                       Only non-subscripted types need apply.
-        :param default_result: A default result to return when returning results
+        :param keep_alive_result: A default result to return when returning results
+                to allow the generator to continue even though a lower-level timeout
+                has passed.
+        :param keep_alive_timeout_seconds: Number of seconds seeking a result before the
+                keep_alive_result is returned.  Default value of 0.0 implies
+                waiting forever for a result.
         :param poll_seconds: The number of seconds to wait while waiting for
                 asynchronous Futures to come back with results
         """
         self.asyncio_executor: AsyncioExecutor = asyncio_executor
         self.submitter_id: str = submitter_id
         self.generated_type: Type[Any] = generated_type
-        self.default_result: Any = default_result
+        self.keep_alive_result: Any = keep_alive_result
+        self.keep_alive_timeout_seconds: float = keep_alive_timeout_seconds
         self.poll_seconds: float = poll_seconds
 
     def synchronously_generate(self, function, /, *args, **kwargs) -> Generator[Any, None, None]:
@@ -62,7 +70,7 @@ class AsyncToSyncGenerator:
         while not done:
             try:
                 # Asynchronously call the anext() method on the asynchronous iterator
-                future = self.asyncio_executor.submit(self.submitter_id, anext, async_iter, self.default_result)
+                future = self.asyncio_executor.submit(self.submitter_id, anext, async_iter)
 
                 # Wait for the result of the async_iter. It should be an Awaitable
                 awaitable: Awaitable = self.wait_for_future(future, Awaitable)
@@ -71,7 +79,15 @@ class AsyncToSyncGenerator:
                 future = self.asyncio_executor.create_task(awaitable, self.submitter_id)
 
                 # Wait for the result of the awaitable. It should be the iteration type.
-                iteration_result: Any = self.wait_for_future(future, self.generated_type)
+                iteration_result: Any = self.keep_alive_result
+                got_real_result: bool = False
+                while not got_real_result:
+                    try:
+                        iteration_result = self.wait_for_future(future, self.generated_type,
+                                                                self.keep_alive_timeout_seconds)
+                        got_real_result = True
+                    except TimeoutError:
+                        yield self.keep_alive_result
 
                 # DEF - there had been a test based on result content to stop the loop
                 #       but we are delegating that to the caller now.
@@ -80,13 +96,16 @@ class AsyncToSyncGenerator:
             except StopAsyncIteration:
                 done = True
 
-    def wait_for_future(self, future: Future, result_type: Type) -> Any:
+    def wait_for_future(self, future: Future, result_type: Type, timeout_seconds: float = 0.0) -> Any:
         """
         Waits for the future of a particular type.
 
         :param future: The asyncio Future to synchronously wait for.
         :param result_type: the type of the future's result to expect.
                     Pass in None if this type checking is not desired.
+        :param timeout_seconds: Amount of time to wait before throwing a TimeoutError
+                    Any value <= 0.0 indicates the desire to loop forever to wait
+                    for the future.
         """
 
         if future is None:
@@ -94,8 +113,18 @@ class AsyncToSyncGenerator:
             return None
 
         # Wait for the future to be done
+        start_time: float = time()
         while not future.done():
+            # Always exit the loop if the future is done
+
+            # Sleep to give another thread a change
             sleep(self.poll_seconds)
+            if timeout_seconds > 0.0:
+                # We have a timeout. See if that has been exceeded
+                time_now: float = time()
+                time_elapsed: float = time_now - start_time
+                if time_elapsed >= timeout_seconds:
+                    raise TimeoutError
 
         # See if there was an exception in the asynchronous realm.
         # If so, raise it in the synchronous realm.

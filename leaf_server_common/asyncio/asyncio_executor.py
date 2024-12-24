@@ -146,21 +146,26 @@ class AsyncioExecutor(Executor):
 
         return future
 
-    def create_task(self, awaitable: Awaitable, submitter_id: str) -> Future:
+    def create_task(self, awaitable: Awaitable, submitter_id: str, raise_exception: bool = False) -> Future:
         """
         Creates a task for the event loop given an Awaitable
         :param awaitable: The Awaitable to create and schedule a task for
+        :param submitter_id: A string id denoting who is doing the submitting.
+        :param raise_exception: True if exceptions are to be raised in the executor.
+                    Default is False.
         :return: The Future corresponding to the results of the scheduled task
         """
         future: Future = self._loop.create_task(awaitable)
-        self.track_future(future, submitter_id, awaitable)
+        self.track_future(future, submitter_id, awaitable, raise_exception)
         return future
 
-    def track_future(self, future: Future, submitter_id: str, function):
+    def track_future(self, future: Future, submitter_id: str, function, raise_exception: bool = False):
         """
         :param future: The Future to track
         :param submitter_id: A string id denoting who is doing the submitting.
         :param function: The function handle to be run in the future
+        :param raise_exception: True if exceptions are to be raised in the executor.
+                    Default is False.
         """
 
         # Weak references in the asyncio system can cause tasks to disappear
@@ -177,7 +182,8 @@ class AsyncioExecutor(Executor):
         self._background_tasks[future] = {
             "submitter_id": submitter_id,
             "function": function_name,
-            "future": future
+            "future": future,
+            "raise_exception": raise_exception
         }
         future.add_done_callback(self.submission_done)
 
@@ -202,7 +208,7 @@ class AsyncioExecutor(Executor):
             try:
                 # First see if there was any exception
                 exception = future.exception()
-                if exception is not None:
+                if exception is not None and future_info.get("raise_exception"):
                     raise exception
 
                 result = future.result()
