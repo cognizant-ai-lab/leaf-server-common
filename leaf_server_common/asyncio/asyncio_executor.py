@@ -213,6 +213,11 @@ class AsyncioExecutor(Executor):
 
                 result = future.result()
                 _ = result
+
+            except StopAsyncIteration:
+                # StopAsyncIteration is OK
+                pass
+
             except TimeoutError:
                 print(f"Coroutine from {origination} took too long()")
 
