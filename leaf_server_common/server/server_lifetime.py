@@ -377,8 +377,15 @@ class ServerLifetime(RequestLogger):
         # and report ill health so infrastructure can restart this service.
         try:
             while self._is_still_serving():
-                self.server_loop_callbacks.loop_callback()
-                time.sleep(self.loop_sleep_seconds)
+                server_active: bool = bool(self.server_loop_callbacks.loop_callback())
+
+                # At least yield the processor if the server is active.
+                sleep_seconds: float = 0.0
+                if not server_active:
+                    sleep_seconds = self.loop_sleep_seconds
+                    print(f"Sleeping for {sleep_seconds}")
+
+                time.sleep(sleep_seconds)
 
         except KeyboardInterrupt:
             pass

@@ -17,11 +17,13 @@ class ServerLoopCallbacks:
     reach out at certain points in the main server loop.
     """
 
-    def loop_callback(self):
+    def loop_callback(self) -> bool:
         """
         Periodically called by the main server loop of ServerLifetime.
+        :return: True if the server is considered active. False or None otherwise
         """
         # Do nothing
+        return False
 
     def shutdown_callback(self):
         """
