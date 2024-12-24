@@ -10,6 +10,7 @@
 #
 # END COPYRIGHT
 from typing import Any
+from typing import Awaitable
 from typing import Dict
 from typing import List
 
@@ -143,6 +144,18 @@ class AsyncioExecutor(Executor):
 
         self.track_future(future, submitter_id, function)
 
+        return future
+
+    def create_task(self, awaitable: Awaitable, submitter_id: str) -> Future:
+        """
+        Creates a task for the event loop given an Awaitable
+        :param awaitable: The Awaitable to create and schedule a task for
+        :return: The Future corresponding to the results of the scheduled task
+        """
+        future: Future = self._loop.create_task(awaitable)
+        self.track_future(future, submitter_id, awaitable)
+        return future
+
     def track_future(self, future: Future, submitter_id: str, function):
         """
         :param future: The Future to track
@@ -153,9 +166,17 @@ class AsyncioExecutor(Executor):
         # Weak references in the asyncio system can cause tasks to disappear
         # before they execute.  Hold a reference in a global as per
         # https://docs.python.org/3/library/asyncio-task.html#creating-tasks
+
+        function_name: str = None
+        try:
+            function_name = function.__qualname__   # Fully qualified name of function
+        except AttributeError:
+            # Just get the class name
+            function_name = function.__class__.__name__
+
         self._background_tasks[future] = {
             "submitter_id": submitter_id,
-            "function": function.__qualname__,  # Fully qualified name of function
+            "function": function_name,
             "future": future
         }
         future.add_done_callback(self.submission_done)

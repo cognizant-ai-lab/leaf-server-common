@@ -18,6 +18,8 @@ class AsyncToSyncGenerator:
 
     def __init__(self, asyncio_executor: AsyncioExecutor,
                  submitter_id: str = None,
+                 generated_type: Type[Any] = Any,
+                 default_result: Any = None,
                  poll_seconds: float = 0.1):
         """
         Constructor
@@ -26,22 +28,23 @@ class AsyncToSyncGenerator:
                 use for the conversion.
         :param submitter_id: An optional string to identify who is doing the async
                 task submission.
+        :param generated_type: The type that is returned from the AsyncGenerator.
+                Note: Subscripted generics like Dict[str, Any] cannot be used here.
+                      Only non-subscripted types need apply.
+        :param default_result: A default result to return when returning results
         :param poll_seconds: The number of seconds to wait while waiting for
                 asynchronous Futures to come back with results
         """
         self.asyncio_executor: AsyncioExecutor = asyncio_executor
-        self.poll_seconds: float = poll_seconds
         self.submitter_id: str = submitter_id
+        self.generated_type: Type[Any] = generated_type
+        self.default_result: Any = default_result
+        self.poll_seconds: float = poll_seconds
 
-    def synchronously_generate(self, function,
-                               generated_type: Type[Any] = Any,
-                               default_result: Any = None,
-                               /, *args, **kwargs) -> Generator[Any]:
+    def synchronously_generate(self, function, /, *args, **kwargs) -> Generator[Any, None, None]:
         """
         :param function: An async function to run that yields its results asynchronously.
                          That is, it returns an AsyncGenerator/AsyncIterator.
-        :param generated_type: The type that is returned from the AsyncGenerator.
-        :param default_result: A default result to return when returning results
         :param /: Positional or keyword arguments.
             See https://realpython.com/python-asterisk-and-slash-special-parameters/
         :param args: args for the function
@@ -59,16 +62,16 @@ class AsyncToSyncGenerator:
         while not done:
             try:
                 # Asynchronously call the anext() method on the asynchronous iterator
-                future = self.asyncio_executor.submit(self.submitter_id, anext, async_iter, default_result)
+                future = self.asyncio_executor.submit(self.submitter_id, anext, async_iter, self.default_result)
 
                 # Wait for the result of the async_iter. It should be an Awaitable
                 awaitable: Awaitable = self.wait_for_future(future, Awaitable)
 
                 # Create an async task on the same event loop for the Awaitable we just got.
-                future = self.asyncio_executor.create_task(awaitable)
+                future = self.asyncio_executor.create_task(awaitable, self.submitter_id)
 
                 # Wait for the result of the awaitable. It should be the iteration type.
-                iteration_result: Any = self.wait_for_future(future, generated_type)
+                iteration_result: Any = self.wait_for_future(future, self.generated_type)
 
                 # DEF - there had been a test based on result content to stop the loop
                 #       but we are delegating that to the caller now.
@@ -102,7 +105,9 @@ class AsyncToSyncGenerator:
 
         # Check type of the result against expectations, if desired.
         result: Any = future.result()
-        if result_type is not None and not isinstance(result, result_type):
+        if result is None:
+            raise ValueError(f"Expected Future result of type {result_type} but got None")
+        elif not isinstance(result, result_type):
             raise ValueError(f"Expected Future result of type {result_type} but got {result.__class__.__name__}")
 
         return result
