@@ -10,6 +10,7 @@
 #
 # END COPYRIGHT
 from typing import Any
+from typing import Awaitable
 from typing import Dict
 from typing import List
 
@@ -53,6 +54,12 @@ class AsyncioExecutor(Executor):
 
         # Use the global
         self._background_tasks: Dict[Future, Dict[str, Any]] = BACKGROUND_TASKS
+
+    def get_event_loop(self) -> AbstractEventLoop:
+        """
+        :return: The AbstractEventLoop associated with this instance
+        """
+        return self._loop
 
     def start(self):
         """
@@ -113,7 +120,8 @@ class AsyncioExecutor(Executor):
 
         :param submitter_id: A string id denoting who is doing the submitting.
         :param function: The function handle to run
-        :param /: I have no idea what this means, but it's necessary
+        :param /: Positional or keyword arguments.
+            See https://realpython.com/python-asterisk-and-slash-special-parameters/
         :param args: args for the function
         :param kwargs: keyword args for the function
         :return: An asyncio.Future that corresponds to the submitted task
@@ -134,13 +142,48 @@ class AsyncioExecutor(Executor):
             func = functools.partial(function, *args, **kwargs)
             future = self._loop.run_in_executor(None, func)
 
+        self.track_future(future, submitter_id, function)
+
+        return future
+
+    def create_task(self, awaitable: Awaitable, submitter_id: str, raise_exception: bool = False) -> Future:
+        """
+        Creates a task for the event loop given an Awaitable
+        :param awaitable: The Awaitable to create and schedule a task for
+        :param submitter_id: A string id denoting who is doing the submitting.
+        :param raise_exception: True if exceptions are to be raised in the executor.
+                    Default is False.
+        :return: The Future corresponding to the results of the scheduled task
+        """
+        future: Future = self._loop.create_task(awaitable)
+        self.track_future(future, submitter_id, awaitable, raise_exception)
+        return future
+
+    def track_future(self, future: Future, submitter_id: str, function, raise_exception: bool = False):
+        """
+        :param future: The Future to track
+        :param submitter_id: A string id denoting who is doing the submitting.
+        :param function: The function handle to be run in the future
+        :param raise_exception: True if exceptions are to be raised in the executor.
+                    Default is False.
+        """
+
         # Weak references in the asyncio system can cause tasks to disappear
         # before they execute.  Hold a reference in a global as per
         # https://docs.python.org/3/library/asyncio-task.html#creating-tasks
+
+        function_name: str = None
+        try:
+            function_name = function.__qualname__   # Fully qualified name of function
+        except AttributeError:
+            # Just get the class name
+            function_name = function.__class__.__name__
+
         self._background_tasks[future] = {
             "submitter_id": submitter_id,
-            "function": function.__qualname__,  # Fully qualified name of function
-            "future": future
+            "function": function_name,
+            "future": future,
+            "raise_exception": raise_exception
         }
         future.add_done_callback(self.submission_done)
 
@@ -163,8 +206,18 @@ class AsyncioExecutor(Executor):
 
         if future.done():
             try:
+                # First see if there was any exception
+                exception = future.exception()
+                if exception is not None and future_info.get("raise_exception"):
+                    raise exception
+
                 result = future.result()
                 _ = result
+
+            except StopAsyncIteration:
+                # StopAsyncIteration is OK
+                pass
+
             except TimeoutError:
                 print(f"Coroutine from {origination} took too long()")
 
