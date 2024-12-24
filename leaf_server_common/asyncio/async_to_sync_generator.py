@@ -17,6 +17,7 @@ class AsyncToSyncGenerator:
     a synchronous one.
     """
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, asyncio_executor: AsyncioExecutor,
                  submitter_id: str = None,
                  generated_type: Type[Any] = Any,
@@ -136,7 +137,7 @@ class AsyncToSyncGenerator:
         result: Any = future.result()
         if result is None:
             raise ValueError(f"Expected Future result of type {result_type} but got None")
-        elif not isinstance(result, result_type):
+        if not isinstance(result, result_type):
             raise ValueError(f"Expected Future result of type {result_type} but got {result.__class__.__name__}")
 
         return result
