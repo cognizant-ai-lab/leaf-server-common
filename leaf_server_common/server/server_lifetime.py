@@ -383,7 +383,6 @@ class ServerLifetime(RequestLogger):
                 sleep_seconds: float = 0.0
                 if not server_active:
                     sleep_seconds = self.loop_sleep_seconds
-                    print(f"Sleeping for {sleep_seconds}")
 
                 time.sleep(sleep_seconds)
 
