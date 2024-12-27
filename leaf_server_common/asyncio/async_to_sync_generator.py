@@ -64,7 +64,35 @@ class AsyncToSyncGenerator:
         """
         return await anext(async_iter)
 
+    def synchronously_generate(self, function, /, *args, **kwargs) -> Generator[Any, None, None]:
+        """
+        :param function: An async function to run that yields its results asynchronously.
+                         That is, it returns an AsyncGenerator/AsyncIterator.
+        :param /: Positional or keyword arguments.
+            See https://realpython.com/python-asterisk-and-slash-special-parameters/
+        :param args: args for the function
+        :param kwargs: keyword args for the function
+        :return: Nothing, but technically this returns a synchronous Generator.
+                 Really, This method yields all the results of the passed-in function
+                 which returns an AsyncGenerator.
+        """
+
+        # Submit the async generator to the event loop
+        future: Future = self.asyncio_executor.submit(self.submitter_id, function, *args, **kwargs)
+
+        # Wait for the result of the function. It should be an AsyncIterator
+        async_iter: AsyncIterator = self.wait_for_future(future, AsyncIterator)
+
+        for result in self.synchronously_iterate(async_iter):
+            yield result
+
     def synchronously_iterate(self, async_iter: AsyncIterator) -> Generator[Any, None, None]:
+        """
+        :param async_iter: The AsyncIterator implementation over which this method
+                    should synchronously yield its results.
+        :return: Nothing, but technically this returns a synchronous Generator.
+                 Really, This method yields all the results of the async_iter.
+        """
 
         # Loop through the asynchronous results
         done: bool = False
@@ -95,25 +123,6 @@ class AsyncToSyncGenerator:
 
             except StopAsyncIteration:
                 done = True
-
-    def synchronously_generate(self, function, /, *args, **kwargs) -> Generator[Any, None, None]:
-        """
-        :param function: An async function to run that yields its results asynchronously.
-                         That is, it returns an AsyncGenerator/AsyncIterator.
-        :param /: Positional or keyword arguments.
-            See https://realpython.com/python-asterisk-and-slash-special-parameters/
-        :param args: args for the function
-        :param kwargs: keyword args for the function
-        """
-
-        # Submit the async generator to the event loop
-        future: Future = self.asyncio_executor.submit(self.submitter_id, function, *args, **kwargs)
-
-        # Wait for the result of the function. It should be an AsyncIterator
-        async_iter: AsyncIterator = self.wait_for_future(future, AsyncIterator)
-
-        for result in self.synchronously_iterate(async_iter):
-            yield result
 
     def wait_for_future(self, future: Future, result_type: Type, timeout_seconds: float = 0.0) -> Any:
         """
