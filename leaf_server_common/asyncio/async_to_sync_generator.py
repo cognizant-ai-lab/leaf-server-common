@@ -164,10 +164,8 @@ class AsyncToSyncGenerator:
         # Getting this result may raise StopAsyncIteration, which the caller must deal with.
         result: Any = future.result()
         if result is None:
-            exception = ValueError(f"Expected Future result of type {result_type} but got None")
-            raise exception
+            raise ValueError(f"Expected Future result of type {result_type} but got None")
         if result is not None and not isinstance(result, result_type):
-            exception = ValueError(f"Expected Future result of type {result_type} but got {result.__class__.__name__}")
-            raise exception
+            raise ValueError(f"Expected Future result of type {result_type} but got {result.__class__.__name__}")
 
         return result
