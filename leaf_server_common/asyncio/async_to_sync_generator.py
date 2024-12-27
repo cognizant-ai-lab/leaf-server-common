@@ -1,6 +1,5 @@
 from typing import Any
 from typing import AsyncIterator
-from typing import Awaitable
 from typing import Generator
 from typing import Type
 
@@ -50,6 +49,21 @@ class AsyncToSyncGenerator:
         self.keep_alive_timeout_seconds: float = keep_alive_timeout_seconds
         self.poll_seconds: float = poll_seconds
 
+    @staticmethod
+    async def my_anext(async_iter: AsyncIterator) -> Any:
+        """
+        Asynchronously calls the built-in anext() on the given asynchronous iterator
+        as a regular coroutine.  We want to wrap this so that the AsyncioExecutor.submit()
+        call has something normal to check on. (anext() is a built-in function and those
+        do not have the same standard function signature that defined coroutines like this one
+        does.)
+
+        :param async_iter: The AsyncIterator whose next result we want.
+        :return: Will asynchronously block to return the next result in the async_iter.
+                 Will throw StopAsyncIteration when it's truly done.
+        """
+        return await anext(async_iter)
+
     def synchronously_generate(self, function, /, *args, **kwargs) -> Generator[Any, None, None]:
         """
         :param function: An async function to run that yields its results asynchronously.
@@ -58,6 +72,9 @@ class AsyncToSyncGenerator:
             See https://realpython.com/python-asterisk-and-slash-special-parameters/
         :param args: args for the function
         :param kwargs: keyword args for the function
+        :return: Nothing, but technically this returns a synchronous Generator.
+                 Really, This method yields all the results of the passed-in function
+                 which returns an AsyncGenerator.
         """
 
         # Submit the async generator to the event loop
@@ -66,18 +83,24 @@ class AsyncToSyncGenerator:
         # Wait for the result of the function. It should be an AsyncIterator
         async_iter: AsyncIterator = self.wait_for_future(future, AsyncIterator)
 
+        # "yield from" below basically says "I know this method returns a generator,
+        #  but just yield on up all of its results."
+        yield from self.synchronously_iterate(async_iter)
+
+    def synchronously_iterate(self, async_iter: AsyncIterator) -> Generator[Any, None, None]:
+        """
+        :param async_iter: The AsyncIterator implementation over which this method
+                    should synchronously yield its results.
+        :return: Nothing, but technically this returns a synchronous Generator.
+                 Really, This method yields all the results of the async_iter.
+        """
+
         # Loop through the asynchronous results
         done: bool = False
         while not done:
             try:
                 # Asynchronously call the anext() method on the asynchronous iterator
-                future = self.asyncio_executor.submit(self.submitter_id, anext, async_iter)
-
-                # Wait for the result of the async_iter. It should be an Awaitable
-                awaitable: Awaitable = self.wait_for_future(future, Awaitable)
-
-                # Create an async task on the same event loop for the Awaitable we just got.
-                future = self.asyncio_executor.create_task(awaitable, self.submitter_id)
+                future = self.asyncio_executor.submit(self.submitter_id, self.my_anext, async_iter)
 
                 # Wait for the result of the awaitable. It should be the iteration type.
                 iteration_result: Any = self.keep_alive_result
@@ -87,8 +110,13 @@ class AsyncToSyncGenerator:
                         iteration_result = self.wait_for_future(future, self.generated_type,
                                                                 self.keep_alive_timeout_seconds)
                         got_real_result = True
+
                     except TimeoutError:
                         yield self.keep_alive_result
+
+                    except StopAsyncIteration:
+                        got_real_result = True
+                        done = True
 
                 # DEF - there had been a test based on result content to stop the loop
                 #       but we are delegating that to the caller now.
@@ -131,6 +159,8 @@ class AsyncToSyncGenerator:
         # If so, raise it in the synchronous realm.
         exception: Exception = future.exception()
         if exception is not None:
+            # Getting may raise StopAsyncIteration as part of normal operation,
+            # which the caller must deal with.
             raise exception
 
         # Check type of the result against expectations, if desired.
