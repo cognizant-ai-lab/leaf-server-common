@@ -142,7 +142,7 @@ class AsyncToSyncGenerator:
 
         # Wait for the future to be done
         start_time: float = time()
-        while not future.done() and not future.cancelled():
+        while not future.done():
             # Always exit the loop if the future is done
 
             # Sleep to give another thread a change
