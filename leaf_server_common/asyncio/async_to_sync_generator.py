@@ -83,6 +83,8 @@ class AsyncToSyncGenerator:
         # Wait for the result of the function. It should be an AsyncIterator
         async_iter: AsyncIterator = self.wait_for_future(future, AsyncIterator)
 
+        # "yield from" below basically says "I know this method returns a generator,
+        #  but just yield on up all of its results."
         yield from self.synchronously_iterate(async_iter)
 
     def synchronously_iterate(self, async_iter: AsyncIterator) -> Generator[Any, None, None]:
