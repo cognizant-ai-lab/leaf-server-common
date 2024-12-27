@@ -1,10 +1,8 @@
 from typing import Any
 from typing import AsyncIterator
-from typing import Awaitable
 from typing import Generator
 from typing import Type
 
-import asyncio
 from asyncio import Future
 from time import sleep
 from time import time
