@@ -4,6 +4,7 @@ from typing import Awaitable
 from typing import Generator
 from typing import Type
 
+import asyncio
 from asyncio import Future
 from time import sleep
 from time import time
@@ -50,6 +51,53 @@ class AsyncToSyncGenerator:
         self.keep_alive_timeout_seconds: float = keep_alive_timeout_seconds
         self.poll_seconds: float = poll_seconds
 
+    @staticmethod
+    async def my_anext(async_iter: AsyncIterator) -> Any:
+        """
+        Asynchronously calls the built-in anext() on the given asynchronous iterator
+        as a regular coroutine.  We want to wrap this so that the AsyncioExecutor.submit()
+        call has something normal to check on. (anext() is a built-in function and those
+        do not have the same standard function signature that defined coroutines like this one
+        does.)
+
+        :param async_iter: The AsyncIterator whose next result we want.
+        :return: Will asynchronously block to return the next result in the async_iter.
+                 Will throw StopAsyncIteration when it's truly done.
+        """
+        return await anext(async_iter)
+
+    def synchronously_iterate(self, async_iter: AsyncIterator) -> Generator[Any, None, None]:
+
+        # Loop through the asynchronous results
+        done: bool = False
+        while not done:
+            try:
+                # Asynchronously call the anext() method on the asynchronous iterator
+                future = self.asyncio_executor.submit(self.submitter_id, self.my_anext, async_iter)
+
+                # Wait for the result of the awaitable. It should be the iteration type.
+                iteration_result: Any = self.keep_alive_result
+                got_real_result: bool = False
+                while not got_real_result:
+                    try:
+                        iteration_result = self.wait_for_future(future, self.generated_type,
+                                                                self.keep_alive_timeout_seconds)
+                        got_real_result = True
+
+                    except TimeoutError:
+                        yield self.keep_alive_result
+
+                    except StopAsyncIteration:
+                        got_real_result = True
+                        done = True
+
+                # DEF - there had been a test based on result content to stop the loop
+                #       but we are delegating that to the caller now.
+                yield iteration_result
+
+            except StopAsyncIteration:
+                done = True
+
     def synchronously_generate(self, function, /, *args, **kwargs) -> Generator[Any, None, None]:
         """
         :param function: An async function to run that yields its results asynchronously.
@@ -66,36 +114,8 @@ class AsyncToSyncGenerator:
         # Wait for the result of the function. It should be an AsyncIterator
         async_iter: AsyncIterator = self.wait_for_future(future, AsyncIterator)
 
-        # Loop through the asynchronous results
-        done: bool = False
-        while not done:
-            try:
-                # Asynchronously call the anext() method on the asynchronous iterator
-                future = self.asyncio_executor.submit(self.submitter_id, anext, async_iter)
-
-                # Wait for the result of the async_iter. It should be an Awaitable
-                awaitable: Awaitable = self.wait_for_future(future, Awaitable)
-
-                # Create an async task on the same event loop for the Awaitable we just got.
-                future = self.asyncio_executor.create_task(awaitable, self.submitter_id)
-
-                # Wait for the result of the awaitable. It should be the iteration type.
-                iteration_result: Any = self.keep_alive_result
-                got_real_result: bool = False
-                while not got_real_result:
-                    try:
-                        iteration_result = self.wait_for_future(future, self.generated_type,
-                                                                self.keep_alive_timeout_seconds)
-                        got_real_result = True
-                    except TimeoutError:
-                        yield self.keep_alive_result
-
-                # DEF - there had been a test based on result content to stop the loop
-                #       but we are delegating that to the caller now.
-                yield iteration_result
-
-            except StopAsyncIteration:
-                done = True
+        for result in self.synchronously_iterate(async_iter):
+            yield result
 
     def wait_for_future(self, future: Future, result_type: Type, timeout_seconds: float = 0.0) -> Any:
         """
@@ -115,7 +135,7 @@ class AsyncToSyncGenerator:
 
         # Wait for the future to be done
         start_time: float = time()
-        while not future.done():
+        while not future.done() and not future.cancelled():
             # Always exit the loop if the future is done
 
             # Sleep to give another thread a change
@@ -130,14 +150,17 @@ class AsyncToSyncGenerator:
         # See if there was an exception in the asynchronous realm.
         # If so, raise it in the synchronous realm.
         exception: Exception = future.exception()
-        if exception is not None:
+        if exception is not None and not isinstance(exception, StopAsyncIteration):
             raise exception
 
         # Check type of the result against expectations, if desired.
+        # Getting this result may raise StopAsyncIteration, which the caller must deal with.
         result: Any = future.result()
         if result is None:
-            raise ValueError(f"Expected Future result of type {result_type} but got None")
-        if not isinstance(result, result_type):
-            raise ValueError(f"Expected Future result of type {result_type} but got {result.__class__.__name__}")
+            exception = ValueError(f"Expected Future result of type {result_type} but got None")
+            raise exception
+        if result is not None and not isinstance(result, result_type):
+            exception = ValueError(f"Expected Future result of type {result_type} but got {result.__class__.__name__}")
+            raise exception
 
         return result
