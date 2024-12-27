@@ -157,11 +157,12 @@ class AsyncToSyncGenerator:
         # See if there was an exception in the asynchronous realm.
         # If so, raise it in the synchronous realm.
         exception: Exception = future.exception()
-        if exception is not None and not isinstance(exception, StopAsyncIteration):
+        if exception is not None:
+            # Getting may raise StopAsyncIteration as part of normal operation,
+            # which the caller must deal with.
             raise exception
 
         # Check type of the result against expectations, if desired.
-        # Getting this result may raise StopAsyncIteration, which the caller must deal with.
         result: Any = future.result()
         if result is None:
             raise ValueError(f"Expected Future result of type {result_type} but got None")
