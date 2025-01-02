@@ -53,7 +53,8 @@ class ServerLifetime(RequestLogger):
                  request_limit=-1, max_workers=10, max_concurrent_rpcs=None,
                  protocol_services_by_name_values=None,
                  loop_sleep_seconds: float = ONE_MINUTE_IN_SECONDS,
-                 server_loop_callbacks: ServerLoopCallbacks = None):
+                 server_loop_callbacks: ServerLoopCallbacks = None,
+                 active_sleep_seconds: float = 0.1):
         """
         Constructor
 
@@ -79,9 +80,10 @@ class ServerLifetime(RequestLogger):
                     <protocol>_pb2.DESCRIPTOR.services_by_name.values()
                     Default is None
         :param loop_sleep_seconds: Number of seconds to sleep in the request
-                    polling loop
+                    polling loop when the server is inactive
         :param server_loop_callbacks: A ServerLoopCallbacks instance to allow
                     app-specific hooks into the main loop of the server.
+        :param active_sleep_seconds: Amount of time to sleep when the server is active
         """
 
         self.start_time_since_epoch = time.time()
@@ -128,6 +130,7 @@ class ServerLifetime(RequestLogger):
             'Total': 0
         }
         self.loop_sleep_seconds = loop_sleep_seconds
+        self.active_sleep_seconds = active_sleep_seconds
 
         self.server_loop_callbacks = server_loop_callbacks
         if self.server_loop_callbacks is None:
@@ -380,7 +383,7 @@ class ServerLifetime(RequestLogger):
                 server_active: bool = bool(self.server_loop_callbacks.loop_callback())
 
                 # At least yield the processor if the server is active.
-                sleep_seconds: float = 0.0
+                sleep_seconds: float = self.active_sleep_seconds
                 if not server_active:
                     sleep_seconds = self.loop_sleep_seconds
 
