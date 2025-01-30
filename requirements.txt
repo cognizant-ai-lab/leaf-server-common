@@ -14,7 +14,7 @@ grpcio-reflection>=1.62.0
 grpcio-tools>=1.62.0
 
 # Pinning to older version of protobuf required for tensorflow==2.14.1
-protobuf>=4.24.5
+protobuf>=4.24.3
 
 # Open-telemetry logging
 opentelemetry-api>=1.23.0
