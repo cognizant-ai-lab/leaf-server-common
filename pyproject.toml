@@ -54,6 +54,6 @@ fallback_version = "0.0.1"
 [project.urls]
 Homepage = "https://github.com/leaf-ai/leaf-server-common"
 Repository = "https://github.com/leaf-ai/leaf-server-common"
-Documentation = "https://github.com/leaf-ai/leaf-common#readme"
+Documentation = "https://github.com/leaf-ai/leaf-server-common#readme"
 # If we move issue tracking to github
-# Issues = "https://github.com/leaf-ai/leaf-common/issues"
+# Issues = "https://github.com/leaf-ai/leaf-server-common/issues"
