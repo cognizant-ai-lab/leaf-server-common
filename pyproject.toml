@@ -10,10 +10,13 @@ name = "leaf-server-common"
 authors = [
     { name="Dan Fink", email="Daniel.Fink@cognizant.com" }
 ]
-description = "Library for common service infrastructure for use by LEAF services"
+description = "Library for common service infrastructure for use by Cognizant AI Lab services"
 keywords = ["service", "infrastructure", "grpc"]
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+# This license name comes from doc recommendation here
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
+license = "LicenseRef-CognizantAcademicSource"
+license-files = ["LICENSE.txt"]
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -26,9 +29,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
 
     "Intended Audience :: Developers",
-
-    # We still need to classify our academic license
-    # "License :: XXX :: XXX"
 ]
 # "dynamic" says we are going to get these project properties by dynamic means.
 # More on each below
@@ -54,3 +54,6 @@ fallback_version = "0.0.1"
 [project.urls]
 Homepage = "https://github.com/leaf-ai/leaf-server-common"
 Repository = "https://github.com/leaf-ai/leaf-server-common"
+Documentation = "https://github.com/leaf-ai/leaf-common#readme"
+# If we move issue tracking to github
+# Issues = "https://github.com/leaf-ai/leaf-common/issues"
