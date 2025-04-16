@@ -1,9 +1,11 @@
-
 # These requirements are for the Python that is run in the
 # build container.
 #
 # Requirements for tests, code style and other build stuff reside in
 # requirements-build.txt
+
+# In-house dependencies
+leaf-common==1.2.21
 
 # Other dependencies
 
