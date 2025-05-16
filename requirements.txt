@@ -5,7 +5,7 @@
 # requirements-build.txt
 
 # In-house dependencies
-leaf-common==1.2.21
+leaf-common==1.2.22
 
 # Other dependencies
 
