@@ -15,11 +15,7 @@ grpcio-health-checking>=1.62.0
 grpcio-reflection>=1.62.0
 grpcio-tools>=1.62.0
 
-# Pinning to older version of protobuf required for tensorflow==2.14.1
-protobuf>=4.25.3,<5.0
-
 # Open-telemetry logging
-opentelemetry-api>=1.23.0,<=1.27.0
-opentelemetry-sdk>=1.23.0,<=1.27.0
-opentelemetry-exporter-otlp>=1.23.0,<=1.27.0
-
+opentelemetry-api>=1.23.0
+opentelemetry-sdk>=1.23.0
+opentelemetry-exporter-otlp>=1.23.0
