@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 import logging
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter

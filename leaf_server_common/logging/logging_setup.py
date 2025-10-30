@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 from threading import current_thread
 from typing import Any
 from typing import Dict

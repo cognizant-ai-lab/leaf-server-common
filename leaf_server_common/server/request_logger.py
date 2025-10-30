@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 from typing import Dict
 
 

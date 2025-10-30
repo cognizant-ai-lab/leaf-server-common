@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 import copy
 import logging
 import threading

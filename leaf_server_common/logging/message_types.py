@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 from enum import Enum
 from logging import INFO
 from logging import addLevelName

@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 from logging import LoggerAdapter
 
 from leaf_server_common.logging.message_types import API

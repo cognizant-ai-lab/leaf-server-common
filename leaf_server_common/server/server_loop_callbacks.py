@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 class ServerLoopCallbacks:
     """
     An interface for the the ServerLifetime to call which will

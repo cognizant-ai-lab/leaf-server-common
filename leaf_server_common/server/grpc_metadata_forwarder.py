@@ -14,7 +14,6 @@
 # limitations under the License.
 # 
 #  END COPYRIGHT
-
 from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
 
 
