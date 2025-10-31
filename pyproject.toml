@@ -14,7 +14,7 @@ description = "Library for common service infrastructure for use by Cognizant AI
 keywords = ["service", "infrastructure", "grpc"]
 readme = "README.md"
 # This license name comes from doc recommendation here
-# https://www.apache.org/licenses/LICENSE-2.0
+# https://packaging.python.org/en/latest/guides/licensing-examples-and-user-scenarios/
 license = "Apache-2.0"
 license-files = ["LICENSE.txt"]
 requires-python = ">=3.10"
