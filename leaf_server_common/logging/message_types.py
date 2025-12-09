@@ -25,6 +25,7 @@ from logging import addLevelName
 # To be sure the API and METRICS log levels show up when log-level INFO is on,
 # we make their log level intefer value a few clicks up from INFO.
 # Seeing API is more important than seeing METRICS
+# pylint: disable=invalid-name
 API = INFO + 7
 METRICS = INFO + 5
 
