@@ -16,6 +16,6 @@ grpcio-reflection>=1.62.0
 grpcio-tools>=1.62.0
 
 # Open-telemetry logging
-opentelemetry-api>=1.23.0
-opentelemetry-sdk>=1.23.0
-opentelemetry-exporter-otlp>=1.23.0
+opentelemetry-api>=1.39.0
+opentelemetry-sdk>=1.39.0
+opentelemetry-exporter-otlp>=1.39.0

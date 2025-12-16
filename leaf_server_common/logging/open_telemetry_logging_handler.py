@@ -18,7 +18,8 @@
 import logging
 
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-from opentelemetry.sdk._logs._internal import LogData, LogRecord
+from opentelemetry.sdk._logs._internal import LogRecord
+from opentelemetry.sdk._logs._internal import ReadableLogRecord
 from opentelemetry.sdk.resources import _DEFAULT_RESOURCE
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from opentelemetry._logs.severity import SeverityNumber
@@ -159,9 +160,10 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         try:
             lrec = LogRecord(body=formatted,
                              span_id=span_id_val, trace_id=trace_id_val, trace_flags=0,
-                             severity_number=SeverityNumber.UNSPECIFIED,
-                             resource=_DEFAULT_RESOURCE)
-            ldata = LogData(log_record=lrec, instrumentation_scope=InstrumentationScope(name=""))
+                             severity_number=SeverityNumber.UNSPECIFIED)
+            ldata = ReadableLogRecord(log_record=lrec,
+                                      instrumentation_scope=InstrumentationScope(name=""),
+                                      resource=_DEFAULT_RESOURCE)
             self.exporter.export([ldata])
             # If we send out log message successfully, reset our "fail" counter,
             # so we would only react to MAX_SEND_FAILED_COUNT
