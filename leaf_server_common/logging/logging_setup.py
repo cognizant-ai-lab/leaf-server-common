@@ -19,12 +19,9 @@ from threading import current_thread
 from typing import Any
 from typing import Dict
 
-from leaf_common.logging.logging_setup \
-    import LoggingSetup
-from leaf_server_common.logging.service_log_record \
-    import ServiceLogRecord
-from leaf_server_common.logging.structured_log_record \
-    import StructuredLogRecord
+from leaf_common.logging.logging_setup import LoggingSetup
+from leaf_server_common.logging.service_log_record import ServiceLogRecord
+from leaf_server_common.logging.structured_log_record import StructuredLogRecord
 
 
 def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
@@ -70,11 +67,13 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
     service_log_record.set_logging_fields_dict(extra)
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def setup_logging(server_name_for_logs: str,
-                  default_log_dir,
-                  log_config_env,
-                  log_level_env,
-                  extra_logging_fields_defaults: Dict[str, str] = None):
+                  default_log_dir: str = ".",
+                  log_config_env: str = None,
+                  log_level_env: str = None,
+                  extra_logging_fields_defaults: Dict[str, str] = None,
+                  logging_config: Dict[str, Any] = None):
     """
     Setup logging to be used by ServerLifeTime
     """
@@ -96,7 +95,8 @@ def setup_logging(server_name_for_logs: str,
                                  default_log_config_file="logging.json",
                                  default_log_level="DEBUG",
                                  log_config_env=log_config_env,
-                                 log_level_env=log_level_env)
+                                 log_level_env=log_level_env,
+                                 logging_config=logging_config)
     logging_setup.setup()
 
     # Enable translation of log message args to MessageType
