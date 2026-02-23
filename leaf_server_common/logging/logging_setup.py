@@ -67,6 +67,7 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
     service_log_record.set_logging_fields_dict(extra)
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def setup_logging(server_name_for_logs: str,
                   default_log_dir,
                   log_config_env,
