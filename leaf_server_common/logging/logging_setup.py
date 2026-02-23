@@ -70,8 +70,8 @@ def setup_extra_logging_fields(metadata_dict: Dict[str, Any] = None,
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 def setup_logging(server_name_for_logs: str,
                   default_log_dir,
-                  log_config_env,
-                  log_level_env,
+                  log_config_env: str = None,
+                  log_level_env: str = None,
                   extra_logging_fields_defaults: Dict[str, str] = None,
                   logging_config: Dict[str, Any] = None):
     """
