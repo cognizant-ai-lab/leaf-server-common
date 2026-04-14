@@ -2,7 +2,6 @@
 # We separate out requirements that are specific to builds, but not
 # necessary for operation to minimize the size of containers
 
-
 # Tests
 pytest==9.0.3
 pytest-timer==1.0.0
