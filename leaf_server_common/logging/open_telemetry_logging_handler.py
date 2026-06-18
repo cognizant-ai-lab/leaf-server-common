@@ -90,7 +90,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         # if we call logger with self._already_called
         # set to True.
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.sensistive_logger = SensitiveLogger(self.logger)
+        self.sensitive_logger = SensitiveLogger(self.logger)
 
         # In case log records don't have all the fields we need.
         # This happens in some print() statements during the early stages
@@ -126,7 +126,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
             # If we fail to create OTLPLogExporter for any reason
             # (for example we have no open-telemetry endpoint available)
             # issue a message once and disable this LogExporter
-            self.senstive_logger.error("FAILED to create OTLPLogExporter: %s", exc)
+            self.sensitive_logger.error("FAILED to create OTLPLogExporter: %s", exc)
 
     def emit(self, record: logging.LogRecord):
         """
