@@ -24,6 +24,8 @@ from opentelemetry.sdk.resources import _DEFAULT_RESOURCE
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from opentelemetry._logs.severity import SeverityNumber
 
+from leaf_common.logging.sensitive_logger import SensitiveLogger
+
 OTLP_TRACE_ID_KEY = "trace_id_key"
 OTLP_SPAN_ID_KEY = "span_id_key"
 
@@ -88,6 +90,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         # if we call logger with self._already_called
         # set to True.
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.sensitive_logger = SensitiveLogger(self.logger)
 
         # In case log records don't have all the fields we need.
         # This happens in some print() statements during the early stages
@@ -123,7 +126,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
             # If we fail to create OTLPLogExporter for any reason
             # (for example we have no open-telemetry endpoint available)
             # issue a message once and disable this LogExporter
-            self.logger.error("FAILED to create OTLPLogExporter: %s", exc)
+            self.sensitive_logger.error("FAILED to create OTLPLogExporter: %s", exc)
 
     def emit(self, record: logging.LogRecord):
         """
@@ -173,7 +176,7 @@ class OpenTelemetryLoggingHandler(logging.Handler):
         except BaseException as exc:
             # We want to catch as much as possible here:
             # don't really care about failures in logging.
-            self.logger.info("FAILED to send OTLP log data: %s", exc)
+            self.sensitive_logger.info("FAILED to send OTLP log data: %s", exc)
             self.fail_count = self.fail_count+1
             if self._too_many_fails():
                 self.logger.error("Too many failed attempts to send log data: %d", self.fail_count)
