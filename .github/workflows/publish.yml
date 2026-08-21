@@ -1,5 +1,8 @@
 name: Publish to PyPI
 
+permissions:
+  contents: read
+
 on:
   release:
     types: [published]  # Trigger only when a GitHub Release is published.
@@ -13,43 +16,20 @@ jobs:
       id-token: write #Mandatory for PyPi Trusted Publishing (configured at pypi.org)
 
     steps:
+      # v6.0.2
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Build and publish package
+        # 1.0.10
+        uses: cognizant-ai-lab/build-common/actions/publish-pypi@cb254b1336a6a6034008eab4d5a94a9c034fa89c
         with:
           python-version: '3.10'
 
-      - name: Install build tools
-        run: |
-          pip install --upgrade pip
-          pip install build
-
-      - name: Build wheel and sdist
-        run: python -m build
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-
-      - name: Notify Slack on success
-        if: success()
-        uses: slackapi/slack-github-action@v1.24.0
+      - name: Notify Slack
+        if: ${{ !cancelled() }}
+        # 1.0.10
+        uses: cognizant-ai-lab/build-common/actions/slack-notify@cb254b1336a6a6034008eab4d5a94a9c034fa89c
         with:
-          payload: |
-            {
-              "text": "✅ *Publish Action Passed* for `${{ github.repository }}` on `${{ github.ref_name }}`"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack on failure
-        if: failure()
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {
-              "text": "❌ *Publish Action Failed* for `${{ github.repository }}` on `${{ github.ref_name }}`"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
