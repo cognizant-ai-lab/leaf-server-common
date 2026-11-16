@@ -29,8 +29,9 @@ jobs:
       - name: Build wheel and sdist
         run: python -m build
 
+      # v1.14.3
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086
 
       - name: Notify Slack on success
         if: success()
