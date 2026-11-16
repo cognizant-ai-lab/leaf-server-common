@@ -15,7 +15,7 @@
 #
 # END COPYRIGHT
 
-from leaf_server_common.server.grpc_metadata_util import GrpcMetadataUtil
+from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
 
 
 # pylint: disable=too-few-public-methods

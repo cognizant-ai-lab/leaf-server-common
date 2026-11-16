@@ -30,7 +30,7 @@ from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
 from grpc_reflection.v1alpha import reflection
 
-from leaf_server_common.server.grpc_metadata_util import GrpcMetadataUtil
+from leaf_common.session.grpc_metadata_util import GrpcMetadataUtil
 
 from leaf_server_common.logging.logging_setup \
     import setup_extra_logging_fields
