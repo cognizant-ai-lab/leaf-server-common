@@ -46,24 +46,10 @@ jobs:
           pip install readme_renderer readme_renderer[md]
           python -m readme_renderer README.md
 
-      - name: Notify Slack on success
-        if: success()
-        uses: slackapi/slack-github-action@v1.24.0
+      - name: Notify Slack
+        if: ${{ !cancelled() }}
+        # 1.0.13
+        uses: cognizant-ai-lab/build-common/actions/slack-notify@e11ab4d3725a79bd8b28c3f7fb0785615290cf24
         with:
-          payload: |
-            {
-              "text": "✅ *Tests Passed* for `${{ github.repository }}` on `${{ github.ref_name }}`"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack on failure
-        if: failure()
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {
-              "text": "❌ *Tests Failed* for `${{ github.repository }}` on `${{ github.ref_name }}`"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
