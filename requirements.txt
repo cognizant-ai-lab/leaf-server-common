@@ -5,7 +5,8 @@
 # requirements-build.txt
 
 # In-house dependencies
-leaf-common>=1.2.44
+# Versions above 1.3.0 do not have GrpcMetadataUtil
+leaf-common>=1.2.44,<1.3.0
 
 # Other dependencies
 
